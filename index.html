@@ -99,7 +99,6 @@
     "Achievement 4", "Achievement 5", "Achievement 6", "Achievement 7", "Achievement 8"
   ];
 
-  // Separated Mitchell Exams as requested
   const milestoneList = [
     "Wright Brothers Award", 
     "Mitchell Aerospace Exam", 
@@ -109,7 +108,14 @@
     "General Carl A. Spaatz Award"
   ];
 
-  const sdaEssayList = [
+  // Restricted strictly to Achievement 8, Eaker, and Spaatz
+  const essayList = [
+    "Achievement 8", 
+    "Ira C. Eaker Award", 
+    "General Carl A. Spaatz Award"
+  ];
+
+  const sdaList = [
     "Achievement 9", "Achievement 10", "Achievement 11", "Achievement 12",
     "Achievement 13", "Achievement 14", "Achievement 15", "Achievement 16"
   ];
@@ -141,12 +147,13 @@
     if (needsAchievement.includes(requestType)) {
       achievementGroup.classList.remove("hidden");
       achievementSelect.required = true;
-      achievementSelect.innerHTML = '<option value="">-- Select Achievement / Exam --</option>';
+      achievementSelect.innerHTML = '<option value="">-- Select Achievement / Award --</option>';
 
       let targetList = fullList;
       if (requestType === "Drill Test") targetList = drillList;
       else if (requestType === "Milestone Exam") targetList = milestoneList;
-      else if (requestType === "Essay Submission" || requestType === "Technical Writing Submission") targetList = sdaEssayList;
+      else if (requestType === "Essay Submission") targetList = essayList;
+      else if (requestType === "Technical Writing Submission") targetList = sdaList;
 
       targetList.forEach(item => {
         const opt = document.createElement("option");
