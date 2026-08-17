@@ -21,7 +21,7 @@ st.markdown("""
         box-shadow: 0 4px 20px rgba(0,0,0,0.5);
     }
     
-    /* Form Labels & Titles in White */
+    /* Labels & Titles in White */
     div[data-testid="stForm"] label, 
     div[data-testid="stForm"] h1, 
     div[data-testid="stForm"] h2, 
@@ -30,12 +30,27 @@ st.markdown("""
         color: #ffffff !important;
     }
     
-    /* Dropdown Menus & Inputs Text Color */
-    div[data-testid="stSelectbox"] div[role="button"],
+    /* All Input Boxes & Select Boxes */
+    div[data-baseweb="select"] > div,
     div[data-testid="stForm"] input {
-        color: #00308f !important;
         background-color: #ffffff !important;
-        font-weight: bold;
+        color: #00308f !important;
+        font-weight: bold !important;
+    }
+
+    /* Selected Item Text in Dropdown Box */
+    div[data-baseweb="select"] * {
+        color: #00308f !important;
+    }
+
+    /* Dropdown Popover Menu Options List */
+    ul[data-baseweb="menu"] {
+        background-color: #ffffff !important;
+    }
+    
+    ul[data-baseweb="menu"] li {
+        color: #00308f !important;
+        font-weight: bold !important;
     }
 
     /* Submit Button Styling */
