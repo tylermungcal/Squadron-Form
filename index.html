@@ -27,27 +27,6 @@
     <label for="email">Email Address *</label>
     <input type="email" id="email" name="email" required>
 
-    <label for="rank">Rank / Grade *</label>
-    <select id="rank" name="rank" required>
-      <option value="">-- Select Rank / Grade --</option>
-      <option value="Cadet Airman Basic (C/AB)">Cadet Airman Basic (C/AB)</option>
-      <option value="Cadet Airman (C/Amn)">Cadet Airman (C/Amn)</option>
-      <option value="Cadet Airman First Class (C/A1C)">Cadet Airman First Class (C/A1C)</option>
-      <option value="Cadet Senior Airman (C/SrA)">Cadet Senior Airman (C/SrA)</option>
-      <option value="Cadet Staff Sergeant (C/SSgt)">Cadet Staff Sergeant (C/SSgt)</option>
-      <option value="Cadet Technical Sergeant (C/TSgt)">Cadet Technical Sergeant (C/TSgt)</option>
-      <option value="Cadet Master Sergeant (C/MSgt)">Cadet Master Sergeant (C/MSgt)</option>
-      <option value="Cadet Senior Master Sergeant (C/SMSgt)">Cadet Senior Master Sergeant (C/SMSgt)</option>
-      <option value="Cadet Chief Master Sergeant (C/CMSgt)">Cadet Chief Master Sergeant (C/CMSgt)</option>
-      <option value="Cadet Second Lieutenant (C/2d Lt)">Cadet Second Lieutenant (C/2d Lt)</option>
-      <option value="Cadet First Lieutenant (C/1st Lt)">Cadet First Lieutenant (C/1st Lt)</option>
-      <option value="Cadet Captain (C/Capt)">Cadet Captain (C/Capt)</option>
-      <option value="Cadet Major (C/Maj)">Cadet Major (C/Maj)</option>
-      <option value="Cadet Lieutenant Colonel (C/Lt Col)">Cadet Lieutenant Colonel (C/Lt Col)</option>
-      <option value="Cadet Colonel (C/Col)">Cadet Colonel (C/Col)</option>
-      <option value="Senior Member / Officer">Senior Member / Officer</option>
-    </select>
-
     <label for="flight">Flight *</label>
     <select id="flight" name="flight" required>
       <option value="">-- Select Flight --</option>
@@ -79,30 +58,9 @@
 
     <!-- Dynamic Achievement Group -->
     <div id="achievementGroup" class="form-group hidden">
-      <label for="achievement">For what achievement / award?</label>
+      <label for="achievement">For what achievement / award? *</label>
       <select id="achievement" name="achievement">
-        <option value="">-- Select Achievement --</option>
-        <option value="Achievement 1">Achievement 1</option>
-        <option value="Achievement 2">Achievement 2</option>
-        <option value="Achievement 3">Achievement 3</option>
-        <option value="Wright Brothers Award">Wright Brothers Award</option>
-        <option value="Achievement 4">Achievement 4</option>
-        <option value="Achievement 5">Achievement 5</option>
-        <option value="Achievement 6">Achievement 6</option>
-        <option value="Achievement 7">Achievement 7</option>
-        <option value="Achievement 8">Achievement 8</option>
-        <option value="Billy Mitchell Award">Billy Mitchell Award</option>
-        <option value="Achievement 9">Achievement 9</option>
-        <option value="Achievement 10">Achievement 10</option>
-        <option value="Achievement 11">Achievement 11</option>
-        <option value="Amelia Earhart Award">Amelia Earhart Award</option>
-        <option value="Achievement 12">Achievement 12</option>
-        <option value="Achievement 13">Achievement 13</option>
-        <option value="Achievement 14">Achievement 14</option>
-        <option value="Achievement 15">Achievement 15</option>
-        <option value="Achievement 16">Achievement 16</option>
-        <option value="Ira C. Eaker Award">Ira C. Eaker Award</option>
-        <option value="General Carl A. Spaatz Award">General Carl A. Spaatz Award</option>
+        <!-- Options generated dynamically based on request type -->
       </select>
     </div>
 
@@ -126,9 +84,23 @@
 <script>
   let submitted = false;
 
+  const drillAchievements = [
+    "Achievement 1", "Achievement 2", "Achievement 3", "Wright Brothers Award",
+    "Achievement 4", "Achievement 5", "Achievement 6", "Achievement 7", "Achievement 8"
+  ];
+
+  const allAchievements = [
+    "Achievement 1", "Achievement 2", "Achievement 3", "Wright Brothers Award",
+    "Achievement 4", "Achievement 5", "Achievement 6", "Achievement 7", "Achievement 8",
+    "Billy Mitchell Award", "Achievement 9", "Achievement 10", "Achievement 11",
+    "Amelia Earhart Award", "Achievement 12", "Achievement 13", "Achievement 14",
+    "Achievement 15", "Achievement 16", "Ira C. Eaker Award", "General Carl A. Spaatz Award"
+  ];
+
   function toggleFields() {
     const requestType = document.getElementById("requestType").value;
     const achievementGroup = document.getElementById("achievementGroup");
+    const achievementSelect = document.getElementById("achievement");
     const fileGroup = document.getElementById("fileGroup");
     const fileUrlInput = document.getElementById("fileUrl");
 
@@ -137,9 +109,21 @@
 
     if (needsAchievement.includes(requestType)) {
       achievementGroup.classList.remove("hidden");
+      achievementSelect.required = true;
+      achievementSelect.innerHTML = '<option value="">-- Select Achievement --</option>';
+
+      // Restrict options if requesting a Drill Test
+      const optionsList = (requestType === "Drill Test") ? drillAchievements : allAchievements;
+      optionsList.forEach(item => {
+        const opt = document.createElement("option");
+        opt.value = item;
+        opt.textContent = item;
+        achievementSelect.appendChild(opt);
+      });
     } else {
       achievementGroup.classList.add("hidden");
-      document.getElementById("achievement").value = "";
+      achievementSelect.required = false;
+      achievementSelect.innerHTML = "";
     }
 
     if (needsFile.includes(requestType)) {
