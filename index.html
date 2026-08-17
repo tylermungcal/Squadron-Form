@@ -27,6 +27,27 @@
     <label for="email">Email Address *</label>
     <input type="email" id="email" name="email" required>
 
+    <label for="rank">Rank / Grade *</label>
+    <select id="rank" name="rank" required>
+      <option value="">-- Select Rank / Grade --</option>
+      <option value="Cadet Airman Basic (C/AB)">Cadet Airman Basic (C/AB)</option>
+      <option value="Cadet Airman (C/Amn)">Cadet Airman (C/Amn)</option>
+      <option value="Cadet Airman First Class (C/A1C)">Cadet Airman First Class (C/A1C)</option>
+      <option value="Cadet Senior Airman (C/SrA)">Cadet Senior Airman (C/SrA)</option>
+      <option value="Cadet Staff Sergeant (C/SSgt)">Cadet Staff Sergeant (C/SSgt)</option>
+      <option value="Cadet Technical Sergeant (C/TSgt)">Cadet Technical Sergeant (C/TSgt)</option>
+      <option value="Cadet Master Sergeant (C/MSgt)">Cadet Master Sergeant (C/MSgt)</option>
+      <option value="Cadet Senior Master Sergeant (C/SMSgt)">Cadet Senior Master Sergeant (C/SMSgt)</option>
+      <option value="Cadet Chief Master Sergeant (C/CMSgt)">Cadet Chief Master Sergeant (C/CMSgt)</option>
+      <option value="Cadet Second Lieutenant (C/2d Lt)">Cadet Second Lieutenant (C/2d Lt)</option>
+      <option value="Cadet First Lieutenant (C/1st Lt)">Cadet First Lieutenant (C/1st Lt)</option>
+      <option value="Cadet Captain (C/Capt)">Cadet Captain (C/Capt)</option>
+      <option value="Cadet Major (C/Maj)">Cadet Major (C/Maj)</option>
+      <option value="Cadet Lieutenant Colonel (C/Lt Col)">Cadet Lieutenant Colonel (C/Lt Col)</option>
+      <option value="Cadet Colonel (C/Col)">Cadet Colonel (C/Col)</option>
+      <option value="Senior Member / Officer">Senior Member / Officer</option>
+    </select>
+
     <label for="flight">Flight *</label>
     <select id="flight" name="flight" required>
       <option value="">-- Select Flight --</option>
@@ -111,10 +132,7 @@
     const fileGroup = document.getElementById("fileGroup");
     const fileUrlInput = document.getElementById("fileUrl");
 
-    // Types that require Achievement selection
     const needsAchievement = ["Drill Test", "PRB", "Milestone Exam", "Essay Submission", "Technical Writing Submission"];
-    
-    // Types that require Document Link
     const needsFile = ["Essay Submission", "Technical Writing Submission"];
 
     if (needsAchievement.includes(requestType)) {
@@ -140,7 +158,7 @@
       status.style.color = "green";
       status.innerText = "Submitted successfully!";
       document.getElementById("customForm").reset();
-      toggleFields(); // Reset field visibility
+      toggleFields();
       submitted = false;
     }
   }
