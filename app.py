@@ -30,27 +30,46 @@ st.markdown("""
         color: #ffffff !important;
     }
     
-    /* All Input Boxes & Select Boxes */
-    div[data-baseweb="select"] > div,
+    /* Input Boxes (Text / Date) */
     div[data-testid="stForm"] input {
         background-color: #ffffff !important;
         color: #00308f !important;
         font-weight: bold !important;
     }
 
-    /* Selected Item Text in Dropdown Box */
-    div[data-baseweb="select"] * {
-        color: #00308f !important;
+    /* Target Dropdown Input Box & Container */
+    div[data-baseweb="select"] {
+        background-color: #ffffff !important;
+        border-radius: 4px;
     }
 
-    /* Dropdown Popover Menu Options List */
+    /* Force ALL text inside the closed dropdown to dark blue */
+    div[data-baseweb="select"] * {
+        color: #00308f !important;
+        background-color: transparent !important;
+        font-weight: bold !important;
+    }
+
+    /* Target Popover Menu Container when opened */
+    div[data-baseweb="popover"],
+    div[data-baseweb="menu"],
     ul[data-baseweb="menu"] {
         background-color: #ffffff !important;
     }
-    
-    ul[data-baseweb="menu"] li {
+
+    /* Target Dropdown Items in Opened Menu */
+    li[data-baseweb="option"],
+    li[data-baseweb="option"] * {
         color: #00308f !important;
+        background-color: #ffffff !important;
         font-weight: bold !important;
+    }
+
+    /* Hover effect for menu items */
+    li[data-baseweb="option"]:hover,
+    li[data-baseweb="option"]:hover * {
+        background-color: #e2e8f0 !important;
+        color: #002060 !important;
     }
 
     /* Submit Button Styling */
