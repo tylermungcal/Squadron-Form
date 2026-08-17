@@ -1,9 +1,10 @@
 import streamlit as st
+import requests
 
 # 1. Page Configuration
 st.set_page_config(page_title="Squadron Request Form", page_icon="✈️", layout="centered")
 
-# 2. Custom CSS for Background Image (IMG_4502.jpeg) & #00308f Card Styling
+# 2. Custom CSS for Background Image & Card Styling
 st.markdown("""
     <style>
     /* Full Page Background Image */
@@ -29,17 +30,12 @@ st.markdown("""
         color: #ffffff !important;
     }
     
-    /* Dropdown Menus & Selectboxes Text */
-    div[data-testid="stSelectbox"] div[role="button"] {
-        color: #00308f !important;
-        background-color: #ffffff !important;
-        font-weight: bold;
-    }
-
-    /* Text Inputs */
+    /* Dropdown Menus & Inputs Text Color */
+    div[data-testid="stSelectbox"] div[role="button"],
     div[data-testid="stForm"] input {
         color: #00308f !important;
         background-color: #ffffff !important;
+        font-weight: bold;
     }
 
     /* Submit Button Styling */
@@ -58,40 +54,11 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
-    }
-    
-    /* Center Card Container Styling */
-    div[data-testid="stForm"] {
-        background-color: #00308f;
-        padding: 30px;
-        border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-    }
-    
-    /* Make Form Text White */
-    div[data-testid="stForm"] label, 
-    div[data-testid="stForm"] h1, 
-    div[data-testid="stForm"] h2, 
-    div[data-testid="stForm"] p,
-    div[data-testid="stForm"] .stCaption {
-        color: #ffffff !important;
-    }
-    
-    /* Submit Button Styling */
-    div[data-testid="stForm"] button {
-        background-color: #ffffff !important;
-        color: #00308f !important;
-        font-weight: bold !important;
-        border-radius: 6px !important;
-        width: 100% !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
 
-# 3. Form Content
+# 3. Form Header
 st.markdown("## Squadron Request Form")
 
-# Form Lists
+# Dropdown Option Lists
 drill_list = ["Achievement 1", "Achievement 2", "Achievement 3", "Wright Brothers Award", "Achievement 4", "Achievement 5", "Achievement 6", "Achievement 7", "Achievement 8"]
 milestone_list = ["Wright Brothers Award", "Mitchell Aerospace Exam", "Mitchell Leadership Exam", "Amelia Earhart Award", "Ira C. Eaker Award", "General Carl A. Spaatz Award"]
 essay_list = ["Achievement 8", "Ira C. Eaker Award", "General Carl A. Spaatz Award"]
@@ -137,7 +104,6 @@ with st.form("squadron_form", clear_on_submit=True):
     if request_type in ["PRB", "Essay Submission", "Technical Writing Submission (SDA)", "Specialty Exam"]:
         label = "CAPF 60-90 Form Link (Phases 1-4) *" if request_type == "PRB" else "Document / PDF Link *"
         help_txt = "Upload your completed CAPF 60-90 form to Google Drive with link viewing access." if request_type == "PRB" else "Upload your document to Google Drive and paste the link."
-        
         file_url = st.text_input(label, placeholder="https://drive.google.com/...", help=help_txt)
 
     submit_button = st.form_submit_button("Submit Request")
@@ -146,5 +112,20 @@ with st.form("squadron_form", clear_on_submit=True):
         if not email or flight == "-- Select Flight --" or not first_name or not last_name or request_type == "-- Select Request --":
             st.error("Please fill in all required fields.")
         else:
-            # Here you can hook up Google Sheets API or webhooks
-            st.success("Submitted successfully!")
+            WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzVSE7HA-fR--ME4MmTfYzyAzOYPhxT6IUDEK0d5PAvcxdgSOUPs9BoEP2okNKvE0e8Ow/exec"
+            payload = {
+                "email": email,
+                "flight": flight,
+                "firstName": first_name,
+                "lastName": last_name,
+                "requestType": request_type,
+                "achievement": achievement if achievement else "",
+                "specialtyExam": specialty_exam if specialty_exam else "",
+                "meetingDate": str(meeting_date) if meeting_date else "",
+                "fileUrl": file_url if file_url else ""
+            }
+            try:
+                requests.post(WEBHOOK_URL, data=payload)
+                st.success("Submitted successfully!")
+            except Exception as e:
+                st.error(f"Error submitting form: {e}")
