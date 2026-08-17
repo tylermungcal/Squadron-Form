@@ -79,9 +79,9 @@
 
     <!-- Dynamic File Upload Group -->
     <div id="fileGroup" class="form-group hidden">
-      <label for="fileUrl">Document / PDF Link *</label>
+      <label id="fileLabel" for="fileUrl">Document / PDF Link *</label>
       <input type="url" id="fileUrl" name="fileUrl" placeholder="https://drive.google.com/...">
-      <div class="help-text">Upload your PDF or prerequisite screenshot to Google Drive, set permissions to "Anyone with the link can view", and paste link above.</div>
+      <div id="fileHelpText" class="help-text">Upload your PDF or prerequisite screenshot to Google Drive, set permissions to "Anyone with the link can view", and paste link above.</div>
     </div>
 
     <button type="submit" id="submitBtn">Submit Request</button>
@@ -108,7 +108,6 @@
     "General Carl A. Spaatz Award"
   ];
 
-  // Restricted strictly to Achievement 8, Eaker, and Spaatz
   const essayList = [
     "Achievement 8", 
     "Ira C. Eaker Award", 
@@ -138,10 +137,12 @@
     const specialtySelect = document.getElementById("specialtyExam");
 
     const fileGroup = document.getElementById("fileGroup");
+    const fileLabel = document.getElementById("fileLabel");
+    const fileHelpText = document.getElementById("fileHelpText");
     const fileUrlInput = document.getElementById("fileUrl");
 
     const needsAchievement = ["Drill Test", "PRB", "Milestone Exam", "Essay Submission", "Technical Writing Submission"];
-    const needsFile = ["Essay Submission", "Technical Writing Submission", "Specialty Exam"];
+    const needsFile = ["PRB", "Essay Submission", "Technical Writing Submission", "Specialty Exam"];
 
     // Handle Achievement Field
     if (needsAchievement.includes(requestType)) {
@@ -181,6 +182,14 @@
     if (needsFile.includes(requestType)) {
       fileGroup.classList.remove("hidden");
       fileUrlInput.required = true;
+
+      if (requestType === "PRB") {
+        fileLabel.innerText = "CAPF 60-90 Form Link (Phases 1-4) *";
+        fileHelpText.innerText = "Upload your completed CAPF 60-90 form (Phases 1-4) to Google Drive, set permissions to 'Anyone with the link can view', and paste link above.";
+      } else {
+        fileLabel.innerText = "Document / PDF Link *";
+        fileHelpText.innerText = "Upload your PDF or prerequisite screenshot to Google Drive, set permissions to 'Anyone with the link can view', and paste link above.";
+      }
     } else {
       fileGroup.classList.add("hidden");
       fileUrlInput.required = false;
