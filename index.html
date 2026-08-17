@@ -14,13 +14,16 @@
     button:hover { background: #003d80; }
     .help-text { font-size: 0.85em; color: #555; margin-top: 3px; }
     #status { margin-top: 15px; font-weight: bold; text-align: center; }
+    .form-group { display: block; }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
 
 <div class="card">
   <h2>Squadron Request Form</h2>
-  <form id="customForm">
+  <form id="customForm" action="https://script.google.com/macros/s/AKfycbzVSE7HA-fR--ME4MmTfYzyAzOYPhxT6IUDEK0d5PAvcxdgSOUPs9BoEP2okNKvE0e8Ow/exec" method="POST" target="hidden_iframe" onsubmit="submitted=true;">
+    
     <label for="email">Email Address *</label>
     <input type="email" id="email" name="email" required>
 
@@ -42,7 +45,7 @@
     <input type="text" id="lastName" name="lastName" required>
 
     <label for="requestType">Requesting a... *</label>
-    <select id="requestType" name="requestType" required>
+    <select id="requestType" name="requestType" required onchange="toggleFields()">
       <option value="">-- Select Request --</option>
       <option value="Drill Test">Drill Test</option>
       <option value="PRB">PRB</option>
@@ -53,45 +56,99 @@
       <option value="Specialty Exam">Specialty Exam</option>
     </select>
 
+    <!-- Dynamic Achievement Group -->
+    <div id="achievementGroup" class="form-group hidden">
+      <label for="achievement">For what achievement / award?</label>
+      <select id="achievement" name="achievement">
+        <option value="">-- Select Achievement --</option>
+        <option value="Achievement 1">Achievement 1</option>
+        <option value="Achievement 2">Achievement 2</option>
+        <option value="Achievement 3">Achievement 3</option>
+        <option value="Wright Brothers Award">Wright Brothers Award</option>
+        <option value="Achievement 4">Achievement 4</option>
+        <option value="Achievement 5">Achievement 5</option>
+        <option value="Achievement 6">Achievement 6</option>
+        <option value="Achievement 7">Achievement 7</option>
+        <option value="Achievement 8">Achievement 8</option>
+        <option value="Billy Mitchell Award">Billy Mitchell Award</option>
+        <option value="Achievement 9">Achievement 9</option>
+        <option value="Achievement 10">Achievement 10</option>
+        <option value="Achievement 11">Achievement 11</option>
+        <option value="Amelia Earhart Award">Amelia Earhart Award</option>
+        <option value="Achievement 12">Achievement 12</option>
+        <option value="Achievement 13">Achievement 13</option>
+        <option value="Achievement 14">Achievement 14</option>
+        <option value="Achievement 15">Achievement 15</option>
+        <option value="Achievement 16">Achievement 16</option>
+        <option value="Ira C. Eaker Award">Ira C. Eaker Award</option>
+        <option value="General Carl A. Spaatz Award">General Carl A. Spaatz Award</option>
+      </select>
+    </div>
+
     <label for="meetingDate">Requested Meeting Date</label>
     <input type="date" id="meetingDate" name="meetingDate">
 
-    <label for="fileUrl">Document / PDF Link</label>
-    <input type="url" id="fileUrl" name="fileUrl" placeholder="https://drive.google.com/...">
-    <div class="help-text">Upload your PDF to Google Drive, set permissions to "Anyone with the link can view", and paste link above.</div>
+    <!-- Dynamic File Upload Group -->
+    <div id="fileGroup" class="form-group hidden">
+      <label for="fileUrl">Document / PDF Link *</label>
+      <input type="url" id="fileUrl" name="fileUrl" placeholder="https://drive.google.com/...">
+      <div class="help-text">Upload your PDF to Google Drive, set permissions to "Anyone with the link can view", and paste link above.</div>
+    </div>
 
     <button type="submit" id="submitBtn">Submit Request</button>
   </form>
   <div id="status"></div>
 </div>
 
-<!-- Hidden iframe to capture form submission response -->
-<iframe name="hidden_iframe" id="hidden_iframe" style="display:none;" onload="if(submitted) { window.location='#'; }"></iframe>
+<iframe name="hidden_iframe" id="hidden_iframe" style="display:none;" onload="handleResponse()"></iframe>
 
 <script>
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzVSE7HA-fR--ME4MmTfYzyAzOYPhxT6IUDEK0d5PAvcxdgSOUPs9BoEP2okNKvE0e8Ow/exec";
   let submitted = false;
 
-  const form = document.getElementById("customForm");
-  const status = document.getElementById("status");
+  function toggleFields() {
+    const requestType = document.getElementById("requestType").value;
+    const achievementGroup = document.getElementById("achievementGroup");
+    const fileGroup = document.getElementById("fileGroup");
+    const fileUrlInput = document.getElementById("fileUrl");
 
-  form.addEventListener("submit", function(e) {
-    status.style.color = "#333";
-    status.innerText = "Submitting...";
+    // Types that require Achievement selection
+    const needsAchievement = ["Drill Test", "PRB", "Milestone Exam", "Essay Submission", "Technical Writing Submission"];
+    
+    // Types that require Document Link
+    const needsFile = ["Essay Submission", "Technical Writing Submission"];
 
-    // Route form submission through hidden iframe to avoid browser CORS blocks
-    form.action = SCRIPT_URL;
-    form.method = "POST";
-    form.target = "hidden_iframe";
+    if (needsAchievement.includes(requestType)) {
+      achievementGroup.classList.remove("hidden");
+    } else {
+      achievementGroup.classList.add("hidden");
+      document.getElementById("achievement").value = "";
+    }
 
-    submitted = true;
+    if (needsFile.includes(requestType)) {
+      fileGroup.classList.remove("hidden");
+      fileUrlInput.required = true;
+    } else {
+      fileGroup.classList.add("hidden");
+      fileUrlInput.required = false;
+      fileUrlInput.value = "";
+    }
+  }
 
-    // Reset UI after submission
-    setTimeout(() => {
+  function handleResponse() {
+    if (submitted) {
+      const status = document.getElementById("status");
       status.style.color = "green";
       status.innerText = "Submitted successfully!";
-      form.reset();
-    }, 1500);
+      document.getElementById("customForm").reset();
+      toggleFields(); // Reset field visibility
+      submitted = false;
+    }
+  }
+
+  document.getElementById("customForm").addEventListener("submit", function() {
+    const status = document.getElementById("status");
+    status.style.color = "#333";
+    status.innerText = "Submitting...";
   });
 </script>
 
