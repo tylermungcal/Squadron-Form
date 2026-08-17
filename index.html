@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Squadron Request Form</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 30px auto; padding: 20px; background: #f4f6f9; }
+    .card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    h2 { color: #1a365d; margin-top: 0; }
+    label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; }
+    input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    button { margin-top: 20px; width: 100%; background: #0056b3; color: white; padding: 12px; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+    button:hover { background: #003d80; }
+    .help-text { font-size: 0.85em; color: #555; margin-top: 3px; }
+    #status { margin-top: 15px; font-weight: bold; text-align: center; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h2>Squadron Request Form</h2>
+  <form id="customForm">
+    <label for="email">Email Address *</label>
+    <input type="email" id="email" required>
+
+    <label for="flight">Flight *</label>
+    <select id="flight" required>
+      <option value="">-- Select Flight --</option>
+      <option value="Line Staff">Line Staff</option>
+      <option value="Support Staff">Support Staff</option>
+      <option value="Alpha Flight">Alpha Flight</option>
+      <option value="Bravo Flight">Bravo Flight</option>
+      <option value="Charlie Flight">Charlie Flight</option>
+      <option value="Cadet Training Flight (CTF)">Cadet Training Flight (CTF)</option>
+    </select>
+
+    <label for="firstName">First Name *</label>
+    <input type="text" id="firstName" required>
+
+    <label for="lastName">Last Name *</label>
+    <input type="text" id="lastName" required>
+
+    <label for="requestType">Requesting a... *</label>
+    <select id="requestType" required>
+      <option value="">-- Select Request --</option>
+      <option value="Drill Test">Drill Test</option>
+      <option value="PRB">PRB</option>
+      <option value="CPFT">CPFT (4th Wednesday)</option>
+      <option value="Milestone Exam">Milestone Exam</option>
+      <option value="Essay Submission">Essay Submission</option>
+      <option value="Technical Writing Submission">Technical Writing Submission (SDA)</option>
+      <option value="Specialty Exam">Specialty Exam</option>
+    </select>
+
+    <label for="meetingDate">Requested Meeting Date</label>
+    <input type="date" id="meetingDate">
+
+    <label for="fileUrl">Document / PDF Link</label>
+    <input type="url" id="fileUrl" placeholder="https://drive.google.com/...">
+    <div class="help-text">Upload your PDF to Google Drive, set permissions to "Anyone with the link can view", and paste link above.</div>
+
+    <button type="submit" id="submitBtn">Submit Request</button>
+  </form>
+  <div id="status"></div>
+</div>
+
+<script>
+  // Your deployed Google Apps Script Web App URL
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzVSE7HA-fR--ME4MmTfYzyAzOYPhxT6IUDEK0d5PAvcxdgSOUPs9BoEP2okNKvE0e8Ow/exec";
+
+  document.getElementById("customForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+    const btn = document.getElementById("submitBtn");
+    const status = document.getElementById("status");
+    
+    btn.disabled = true;
+    status.style.color = "#333";
+    status.innerText = "Submitting...";
+
+    const payload = {
+      email: document.getElementById("email").value,
+      flight: document.getElementById("flight").value,
+      firstName: document.getElementById("firstName").value,
+      lastName: document.getElementById("lastName").value,
+      requestType: document.getElementById("requestType").value,
+      meetingDate: document.getElementById("meetingDate").value,
+      fileUrl: document.getElementById("fileUrl").value
+    };
+
+    fetch(SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+    .then(() => {
+      status.style.color = "green";
+      status.innerText = "Submitted successfully!";
+      document.getElementById("customForm").reset();
+      btn.disabled = false;
+    })
+    .catch(err => {
+      status.style.color = "red";
+      status.innerText = "Error submitting form.";
+      btn.disabled = false;
+    });
+  });
+</script>
+
+</body>
+</html>
