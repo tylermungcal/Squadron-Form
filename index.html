@@ -60,7 +60,17 @@
     <div id="achievementGroup" class="form-group hidden">
       <label for="achievement">For what achievement / award? *</label>
       <select id="achievement" name="achievement">
-        <!-- Options generated dynamically based on request type -->
+        <!-- Options populated dynamically based on request type -->
+      </select>
+    </div>
+
+    <!-- Dynamic Specialty Exam Group -->
+    <div id="specialtyGroup" class="form-group hidden">
+      <label for="specialtyExam">Exam Requested *</label>
+      <select id="specialtyExam" name="specialtyExam">
+        <option value="">-- Select Exam --</option>
+        <option value="ICUT">ICUT</option>
+        <option value="Other">Other</option>
       </select>
     </div>
 
@@ -71,7 +81,7 @@
     <div id="fileGroup" class="form-group hidden">
       <label for="fileUrl">Document / PDF Link *</label>
       <input type="url" id="fileUrl" name="fileUrl" placeholder="https://drive.google.com/...">
-      <div class="help-text">Upload your PDF to Google Drive, set permissions to "Anyone with the link can view", and paste link above.</div>
+      <div class="help-text">Upload your PDF or prerequisite screenshot to Google Drive, set permissions to "Anyone with the link can view", and paste link above.</div>
     </div>
 
     <button type="submit" id="submitBtn">Submit Request</button>
@@ -84,12 +94,27 @@
 <script>
   let submitted = false;
 
-  const drillAchievements = [
+  const drillList = [
     "Achievement 1", "Achievement 2", "Achievement 3", "Wright Brothers Award",
     "Achievement 4", "Achievement 5", "Achievement 6", "Achievement 7", "Achievement 8"
   ];
 
-  const allAchievements = [
+  // Separated Mitchell Exams as requested
+  const milestoneList = [
+    "Wright Brothers Award", 
+    "Mitchell Aerospace Exam", 
+    "Mitchell Leadership Exam", 
+    "Amelia Earhart Award",
+    "Ira C. Eaker Award", 
+    "General Carl A. Spaatz Award"
+  ];
+
+  const sdaEssayList = [
+    "Achievement 9", "Achievement 10", "Achievement 11", "Achievement 12",
+    "Achievement 13", "Achievement 14", "Achievement 15", "Achievement 16"
+  ];
+
+  const fullList = [
     "Achievement 1", "Achievement 2", "Achievement 3", "Wright Brothers Award",
     "Achievement 4", "Achievement 5", "Achievement 6", "Achievement 7", "Achievement 8",
     "Billy Mitchell Award", "Achievement 9", "Achievement 10", "Achievement 11",
@@ -99,22 +124,31 @@
 
   function toggleFields() {
     const requestType = document.getElementById("requestType").value;
+    
     const achievementGroup = document.getElementById("achievementGroup");
     const achievementSelect = document.getElementById("achievement");
+    
+    const specialtyGroup = document.getElementById("specialtyGroup");
+    const specialtySelect = document.getElementById("specialtyExam");
+
     const fileGroup = document.getElementById("fileGroup");
     const fileUrlInput = document.getElementById("fileUrl");
 
     const needsAchievement = ["Drill Test", "PRB", "Milestone Exam", "Essay Submission", "Technical Writing Submission"];
-    const needsFile = ["Essay Submission", "Technical Writing Submission"];
+    const needsFile = ["Essay Submission", "Technical Writing Submission", "Specialty Exam"];
 
+    // Handle Achievement Field
     if (needsAchievement.includes(requestType)) {
       achievementGroup.classList.remove("hidden");
       achievementSelect.required = true;
-      achievementSelect.innerHTML = '<option value="">-- Select Achievement --</option>';
+      achievementSelect.innerHTML = '<option value="">-- Select Achievement / Exam --</option>';
 
-      // Restrict options if requesting a Drill Test
-      const optionsList = (requestType === "Drill Test") ? drillAchievements : allAchievements;
-      optionsList.forEach(item => {
+      let targetList = fullList;
+      if (requestType === "Drill Test") targetList = drillList;
+      else if (requestType === "Milestone Exam") targetList = milestoneList;
+      else if (requestType === "Essay Submission" || requestType === "Technical Writing Submission") targetList = sdaEssayList;
+
+      targetList.forEach(item => {
         const opt = document.createElement("option");
         opt.value = item;
         opt.textContent = item;
@@ -126,6 +160,17 @@
       achievementSelect.innerHTML = "";
     }
 
+    // Handle Specialty Exam Field
+    if (requestType === "Specialty Exam") {
+      specialtyGroup.classList.remove("hidden");
+      specialtySelect.required = true;
+    } else {
+      specialtyGroup.classList.add("hidden");
+      specialtySelect.required = false;
+      specialtySelect.value = "";
+    }
+
+    // Handle File / Link Field
     if (needsFile.includes(requestType)) {
       fileGroup.classList.remove("hidden");
       fileUrlInput.required = true;
