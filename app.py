@@ -4,7 +4,7 @@ import requests
 # 1. Page Configuration
 st.set_page_config(page_title="Squadron Request Form", page_icon="✈️", layout="centered")
 
-# 2. Custom CSS for Background Image & Card Styling
+# 2. Simplified CSS (Background photo + Dark Blue Card only)
 st.markdown("""
     <style>
     /* Full Page Background Image */
@@ -13,7 +13,7 @@ st.markdown("""
         background-size: cover;
     }
     
-    /* Center Card Container Styling */
+    /* Center Card Container Styling (#00308f) */
     div[data-testid="stForm"] {
         background-color: #00308f;
         padding: 30px;
@@ -21,70 +21,12 @@ st.markdown("""
         box-shadow: 0 4px 20px rgba(0,0,0,0.5);
     }
     
-    /* Labels & Titles in White */
+    /* Ensure Form Labels and Title stay White on the Blue Card */
     div[data-testid="stForm"] label, 
-    div[data-testid="stForm"] h1, 
     div[data-testid="stForm"] h2, 
     div[data-testid="stForm"] p,
     div[data-testid="stForm"] .stCaption {
         color: #ffffff !important;
-    }
-    
-    /* Input Boxes (Text / Date) */
-    div[data-testid="stForm"] input {
-        background-color: #ffffff !important;
-        color: #00308f !important;
-        font-weight: bold !important;
-    }
-
-    /* Target Dropdown Input Box & Container */
-    div[data-baseweb="select"] {
-        background-color: #ffffff !important;
-        border-radius: 4px;
-    }
-
-    /* Force ALL text inside the closed dropdown to dark blue */
-    div[data-baseweb="select"] * {
-        color: #00308f !important;
-        background-color: transparent !important;
-        font-weight: bold !important;
-    }
-
-    /* Target Popover Menu Container when opened */
-    div[data-baseweb="popover"],
-    div[data-baseweb="menu"],
-    ul[data-baseweb="menu"] {
-        background-color: #ffffff !important;
-    }
-
-    /* Target Dropdown Items in Opened Menu */
-    li[data-baseweb="option"],
-    li[data-baseweb="option"] * {
-        color: #00308f !important;
-        background-color: #ffffff !important;
-        font-weight: bold !important;
-    }
-
-    /* Hover effect for menu items */
-    li[data-baseweb="option"]:hover,
-    li[data-baseweb="option"]:hover * {
-        background-color: #e2e8f0 !important;
-        color: #002060 !important;
-    }
-
-    /* Submit Button Styling */
-    div[data-testid="stForm"] button {
-        background-color: #ffffff !important;
-        color: #00308f !important;
-        font-weight: bold !important;
-        border: 2px solid #ffffff !important;
-        border-radius: 6px !important;
-        width: 100% !important;
-    }
-
-    div[data-testid="stForm"] button:hover {
-        background-color: #e2e8f0 !important;
-        color: #002060 !important;
     }
     </style>
 """, unsafe_allow_html=True)
