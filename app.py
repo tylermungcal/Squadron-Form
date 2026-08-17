@@ -20,6 +20,54 @@ st.markdown("""
         box-shadow: 0 4px 20px rgba(0,0,0,0.5);
     }
     
+    /* Form Labels & Titles in White */
+    div[data-testid="stForm"] label, 
+    div[data-testid="stForm"] h1, 
+    div[data-testid="stForm"] h2, 
+    div[data-testid="stForm"] p,
+    div[data-testid="stForm"] .stCaption {
+        color: #ffffff !important;
+    }
+    
+    /* Dropdown Menus & Selectboxes Text */
+    div[data-testid="stSelectbox"] div[role="button"] {
+        color: #00308f !important;
+        background-color: #ffffff !important;
+        font-weight: bold;
+    }
+
+    /* Text Inputs */
+    div[data-testid="stForm"] input {
+        color: #00308f !important;
+        background-color: #ffffff !important;
+    }
+
+    /* Submit Button Styling */
+    div[data-testid="stForm"] button {
+        background-color: #ffffff !important;
+        color: #00308f !important;
+        font-weight: bold !important;
+        border: 2px solid #ffffff !important;
+        border-radius: 6px !important;
+        width: 100% !important;
+    }
+
+    div[data-testid="stForm"] button:hover {
+        background-color: #e2e8f0 !important;
+        color: #002060 !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+    }
+    
+    /* Center Card Container Styling */
+    div[data-testid="stForm"] {
+        background-color: #00308f;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    
     /* Make Form Text White */
     div[data-testid="stForm"] label, 
     div[data-testid="stForm"] h1, 
