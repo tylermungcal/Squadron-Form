@@ -39,36 +39,45 @@ st.markdown("""
         margin-bottom: 25px;
     }
     
-    /* CHANGE INPUT LABELS / TEXT ABOVE BOXES TO BLACK */
+    /* FORCE FIELD LABELS ABOVE BOXES TO BOLD BLACK */
     .form-card label, 
     .form-card label p,
     div[data-testid="stWidgetLabel"] p,
-    div[data-testid="stWidgetLabel"] label {
+    div[data-testid="stWidgetLabel"] label,
+    label[data-testid="stWidgetLabel"] * {
         color: #000000 !important;
         font-weight: 700 !important;
     }
 
-    /* Keep main headings white */
+    /* Keep header title white */
     .form-card h1, .form-card h2, .form-card h3 {
         color: #ffffff !important;
         font-weight: 700 !important;
     }
     
-    /* SYSTEM THEME UNIFORM INPUT BOXES (TEXT, SELECT, DATE) */
+    /* UNIFORM WHITE INPUT BOXES & SELECT CONTAINERS */
+    div[data-baseweb="select"],
     div[data-baseweb="select"] > div,
-    div[data-baseweb="input"],
-    .stTextInput input,
-    .stDateInput input,
-    div[data-testid="stDateInput"] > div {
+    div[data-baseweb="select"] * {
         background-color: #ffffff !important;
         color: #00308f !important;
         border-radius: 6px !important;
-        border: 1px solid #cccccc !important;
     }
 
-    /* Ensure dropdown option text stays navy blue */
-    div[data-baseweb="select"] * {
+    div[data-baseweb="input"],
+    div[data-baseweb="input"] > div,
+    .stTextInput input,
+    .stDateInput input,
+    div[data-testid="stDateInput"] > div,
+    div[data-testid="stDateInput"] input {
+        background-color: #ffffff !important;
         color: #00308f !important;
+        border-radius: 6px !important;
+    }
+
+    /* SVG arrow icons inside dropdowns */
+    div[data-baseweb="select"] svg {
+        fill: #00308f !important;
     }
     
     /* Password / PIN input field positioning */
