@@ -206,148 +206,149 @@ with tab_form:
         </div>
     ''', unsafe_allow_html=True)
 
-    # Main Form Container (Single Blue Card wrapping all fields)
-    st.markdown('<div class="form-card">', unsafe_allow_html=True)
-    
-    email = st.text_input("Email Address *", key=f"email_{v}")
-    flight = st.selectbox(
-        "Flight *", 
-        ["-- Select --", "Line Staff", "Support Staff", "Alpha Flight", "Bravo Flight", "Charlie Flight", "CTF"], 
-        key=f"flight_{v}"
-    )
-    first_name = st.text_input("First Name *", key=f"first_name_{v}")
-    last_name = st.text_input("Last Name *", key=f"last_name_{v}")
-    
-    request_type = st.selectbox(
-        "Requesting a... *", 
-        [
-            "-- Select --", "Drill Test", "PRB", "CPFT (4th Wednesday)", 
-            "Milestone Exam", "Essay Submission", "Technical Writing Submission (SDA)", "Specialty Exam"
-        ],
-        key=f"request_type_{v}"
-    )
-
-    achievement = None
-    has_achievement_field = False
-    if request_type == "Drill Test":
-        has_achievement_field = True
-        achievement = st.selectbox("For what achievement / award? *", ["-- Select --"] + drill_list, key=f"achievement_{v}")
-    elif request_type == "Milestone Exam":
-        has_achievement_field = True
-        achievement = st.selectbox("For what achievement / award? *", ["-- Select --"] + milestone_list, key=f"achievement_{v}")
-    elif request_type == "Essay Submission":
-        has_achievement_field = True
-        achievement = st.selectbox("For what achievement / award? *", ["-- Select --"] + essay_list, key=f"achievement_{v}")
-    elif request_type == "Technical Writing Submission (SDA)":
-        has_achievement_field = True
-        achievement = st.selectbox("For what achievement / award? *", ["-- Select --"] + sda_list, key=f"achievement_{v}")
-    elif request_type == "PRB":
-        has_achievement_field = True
-        achievement = st.selectbox("For what achievement / award? *", ["-- Select --"] + full_list, key=f"achievement_{v}")
-
-    specialty_exam = None
-    if request_type == "Specialty Exam":
-        specialty_exam = st.selectbox("Exam Requested *", ["-- Select Exam --", "ICUT", "Other"], key=f"specialty_exam_{v}")
-
-    meeting_date = st.date_input(
-        "Requested Meeting Date *", 
-        value=date.today(), 
-        min_value=date.today(), 
-        key=f"meeting_date_{v}"
-    )
-
-    uploaded_file = None
-    if request_type in ["PRB", "Essay Submission", "Technical Writing Submission (SDA)", "Specialty Exam"]:
-        uploaded_file = st.file_uploader(
-            "Upload Required Document / CAPF Form *", 
-            type=["pdf", "png", "jpg", "docx"], 
-            key=f"uploaded_file_{v}"
+    # Wrap inputs inside st.container and apply single .form-card class
+    with st.container():
+        st.markdown('<div class="form-card">', unsafe_allow_html=True)
+        
+        email = st.text_input("Email Address *", key=f"email_{v}")
+        flight = st.selectbox(
+            "Flight *", 
+            ["-- Select --", "Line Staff", "Support Staff", "Alpha Flight", "Bravo Flight", "Charlie Flight", "CTF"], 
+            key=f"flight_{v}"
+        )
+        first_name = st.text_input("First Name *", key=f"first_name_{v}")
+        last_name = st.text_input("Last Name *", key=f"last_name_{v}")
+        
+        request_type = st.selectbox(
+            "Requesting a... *", 
+            [
+                "-- Select --", "Drill Test", "PRB", "CPFT (4th Wednesday)", 
+                "Milestone Exam", "Essay Submission", "Technical Writing Submission (SDA)", "Specialty Exam"
+            ],
+            key=f"request_type_{v}"
         )
 
-    # Validation Calculations
-    valid_wednesday = is_valid_training_wednesday(meeting_date) if meeting_date else False
-    valid_deadline = is_submitted_before_friday_deadline(meeting_date) if meeting_date else False
+        achievement = None
+        has_achievement_field = False
+        if request_type == "Drill Test":
+            has_achievement_field = True
+            achievement = st.selectbox("For what achievement / award? *", ["-- Select --"] + drill_list, key=f"achievement_{v}")
+        elif request_type == "Milestone Exam":
+            has_achievement_field = True
+            achievement = st.selectbox("For what achievement / award? *", ["-- Select --"] + milestone_list, key=f"achievement_{v}")
+        elif request_type == "Essay Submission":
+            has_achievement_field = True
+            achievement = st.selectbox("For what achievement / award? *", ["-- Select --"] + essay_list, key=f"achievement_{v}")
+        elif request_type == "Technical Writing Submission (SDA)":
+            has_achievement_field = True
+            achievement = st.selectbox("For what achievement / award? *", ["-- Select --"] + sda_list, key=f"achievement_{v}")
+        elif request_type == "PRB":
+            has_achievement_field = True
+            achievement = st.selectbox("For what achievement / award? *", ["-- Select --"] + full_list, key=f"achievement_{v}")
 
-    # Required Field Validation Checks
-    is_invalid_email = st.session_state.submitted and not email
-    is_invalid_flight = st.session_state.submitted and (flight == "-- Select --")
-    is_invalid_fname = st.session_state.submitted and not first_name
-    is_invalid_lname = st.session_state.submitted and not last_name
-    is_invalid_req = st.session_state.submitted and (request_type == "-- Select --")
-    is_invalid_achieve = st.session_state.submitted and has_achievement_field and (not achievement or achievement == "-- Select --")
-    is_invalid_date = st.session_state.submitted and (not valid_wednesday or not valid_deadline)
+        specialty_exam = None
+        if request_type == "Specialty Exam":
+            specialty_exam = st.selectbox("Exam Requested *", ["-- Select Exam --", "ICUT", "Other"], key=f"specialty_exam_{v}")
 
-    # Dynamic Red Border Highlights
-    red_css = ""
-    if is_invalid_email:
-        red_css += 'div[data-testid="stTextInput"]:has(input[aria-label="Email Address *"]) input { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
-    if is_invalid_flight:
-        red_css += 'div[data-testid="stSelectbox"]:has(label[aria-label="Flight *"]) div[data-baseweb="select"] > div { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
-    if is_invalid_fname:
-        red_css += 'div[data-testid="stTextInput"]:has(input[aria-label="First Name *"]) input { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
-    if is_invalid_lname:
-        red_css += 'div[data-testid="stTextInput"]:has(input[aria-label="Last Name *"]) input { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
-    if is_invalid_req:
-        red_css += 'div[data-testid="stSelectbox"]:has(label[aria-label="Requesting a... *"]) div[data-baseweb="select"] > div { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
-    if is_invalid_achieve:
-        red_css += 'div[data-testid="stSelectbox"]:has(label[aria-label*="achievement"]) div[data-baseweb="select"] > div { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
-    if is_invalid_date:
-        red_css += 'div[data-testid="stDateInput"] input { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
+        meeting_date = st.date_input(
+            "Requested Meeting Date *", 
+            value=date.today(), 
+            min_value=date.today(), 
+            key=f"meeting_date_{v}"
+        )
 
-    if red_css:
-        st.markdown(f"<style>{red_css}</style>", unsafe_allow_html=True)
+        uploaded_file = None
+        if request_type in ["PRB", "Essay Submission", "Technical Writing Submission (SDA)", "Specialty Exam"]:
+            uploaded_file = st.file_uploader(
+                "Upload Required Document / CAPF Form *", 
+                type=["pdf", "png", "jpg", "docx"], 
+                key=f"uploaded_file_{v}"
+            )
 
-    if st.button("Submit Request"):
-        st.session_state.submitted = True
-        
-        if (not email or flight == "-- Select --" or not first_name or not last_name 
-            or request_type == "-- Select --" or (has_achievement_field and (not achievement or achievement == "-- Select --"))):
-            st.error("⚠️ Please fill in all required fields highlighted in red.")
-        elif not valid_wednesday:
-            st.error("⚠️ Selected date must be a valid Wednesday meeting!")
-        elif not valid_deadline:
-            st.error("⚠️ Request deadline passed! Forms must be submitted by Friday 23:59 prior to the requested Wednesday.")
-        else:
-            file_url = ""
+        # Validation Calculations
+        valid_wednesday = is_valid_training_wednesday(meeting_date) if meeting_date else False
+        valid_deadline = is_submitted_before_friday_deadline(meeting_date) if meeting_date else False
+
+        # Required Field Validation Checks
+        is_invalid_email = st.session_state.submitted and not email
+        is_invalid_flight = st.session_state.submitted and (flight == "-- Select --")
+        is_invalid_fname = st.session_state.submitted and not first_name
+        is_invalid_lname = st.session_state.submitted and not last_name
+        is_invalid_req = st.session_state.submitted and (request_type == "-- Select --")
+        is_invalid_achieve = st.session_state.submitted and has_achievement_field and (not achievement or achievement == "-- Select --")
+        is_invalid_date = st.session_state.submitted and (not valid_wednesday or not valid_deadline)
+
+        # Dynamic Red Border Highlights
+        red_css = ""
+        if is_invalid_email:
+            red_css += 'div[data-testid="stTextInput"]:has(input[aria-label="Email Address *"]) input { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
+        if is_invalid_flight:
+            red_css += 'div[data-testid="stSelectbox"]:has(label[aria-label="Flight *"]) div[data-baseweb="select"] > div { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
+        if is_invalid_fname:
+            red_css += 'div[data-testid="stTextInput"]:has(input[aria-label="First Name *"]) input { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
+        if is_invalid_lname:
+            red_css += 'div[data-testid="stTextInput"]:has(input[aria-label="Last Name *"]) input { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
+        if is_invalid_req:
+            red_css += 'div[data-testid="stSelectbox"]:has(label[aria-label="Requesting a... *"]) div[data-baseweb="select"] > div { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
+        if is_invalid_achieve:
+            red_css += 'div[data-testid="stSelectbox"]:has(label[aria-label*="achievement"]) div[data-baseweb="select"] > div { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
+        if is_invalid_date:
+            red_css += 'div[data-testid="stDateInput"] input { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
+
+        if red_css:
+            st.markdown(f"<style>{red_css}</style>", unsafe_allow_html=True)
+
+        if st.button("Submit Request"):
+            st.session_state.submitted = True
             
-            # Upload to Drive
-            if uploaded_file is not None:
-                with st.spinner("Uploading file to Google Drive..."):
-                    try:
-                        file_url = upload_to_drive(uploaded_file)
-                    except Exception as e:
-                        st.error(f"⚠️ Drive API Upload Error: {e}")
-                        st.exception(e)
-
-            WEBHOOK_URL = "https://script.google.com/macros/s/AKfycby_iDEd9a3hmJQyLhKuP9833KirbBK19Mki2K43eNOSs6iVLYDZq2FEw66V06Bb65uP6g/exec"
-            
-            payload = {
-                "email": email,
-                "flight": flight,
-                "firstName": first_name,
-                "lastName": last_name,
-                "requestType": request_type,
-                "achievement": achievement if achievement else "",
-                "specialtyExam": specialty_exam if specialty_exam else "",
-                "meetingDate": str(meeting_date) if meeting_date else "",
-                "fileUrl": file_url
-            }
-            
-            try:
-                with st.spinner("Submitting request..."):
-                    response = requests.post(WEBHOOK_URL, json=payload, timeout=30)
+            if (not email or flight == "-- Select --" or not first_name or not last_name 
+                or request_type == "-- Select --" or (has_achievement_field and (not achievement or achievement == "-- Select --"))):
+                st.error("⚠️ Please fill in all required fields highlighted in red.")
+            elif not valid_wednesday:
+                st.error("⚠️ Selected date must be a valid Wednesday meeting!")
+            elif not valid_deadline:
+                st.error("⚠️ Request deadline passed! Forms must be submitted by Friday 23:59 prior to the requested Wednesday.")
+            else:
+                file_url = ""
                 
-                if "Error" in response.text or "<!DOCTYPE html>" in response.text:
-                    st.error("⚠️ Submission failed! Google Script returned an authorization or execution error.")
-                else:
-                    st.session_state.form_submitted_success = True
-                    st.session_state.submitted = False
-                    st.session_state.form_version += 1
-                    st.rerun()
-            except Exception as e:
-                st.error(f"Error submitting form: {e}")
+                # Upload to Drive
+                if uploaded_file is not None:
+                    with st.spinner("Uploading file to Google Drive..."):
+                        try:
+                            file_url = upload_to_drive(uploaded_file)
+                        except Exception as e:
+                            st.error(f"⚠️ Drive API Upload Error: {e}")
+                            st.exception(e)
+
+                WEBHOOK_URL = "https://script.google.com/macros/s/AKfycby_iDEd9a3hmJQyLhKuP9833KirbBK19Mki2K43eNOSs6iVLYDZq2FEw66V06Bb65uP6g/exec"
+                
+                payload = {
+                    "email": email,
+                    "flight": flight,
+                    "firstName": first_name,
+                    "lastName": last_name,
+                    "requestType": request_type,
+                    "achievement": achievement if achievement else "",
+                    "specialtyExam": specialty_exam if specialty_exam else "",
+                    "meetingDate": str(meeting_date) if meeting_date else "",
+                    "fileUrl": file_url
+                }
+                
+                try:
+                    with st.spinner("Submitting request..."):
+                        response = requests.post(WEBHOOK_URL, json=payload, timeout=30)
                     
-    st.markdown('</div>', unsafe_allow_html=True)
+                    if "Error" in response.text or "<!DOCTYPE html>" in response.text:
+                        st.error("⚠️ Submission failed! Google Script returned an authorization or execution error.")
+                    else:
+                        st.session_state.form_submitted_success = True
+                        st.session_state.submitted = False
+                        st.session_state.form_version += 1
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"Error submitting form: {e}")
+                        
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # TAB 2: LIVE REQUEST DASHBOARD (PIN PROTECTED)
