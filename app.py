@@ -47,20 +47,19 @@ st.markdown("""
         font-size: 2rem !important;
     }
     
-    /* MAIN FORM CARD CONTAINING ALL INPUTS */
-    .form-card {
+    /* TARGET STREAMLIT FORM CONTAINER DIRECTLY FOR BLUE BACKGROUND */
+    div[data-testid="stVerticalBlock"] > div:has(div[data-testid="stTextInput"]) {
         background-color: #00308f !important;
-        padding: 30px;
-        border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.6);
-        margin-bottom: 25px;
+        padding: 30px !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important;
     }
     
     /* ALL FIELD LABELS AND HEADINGS IN WHITE */
-    .form-card label, 
-    .form-card label p,
-    .form-card p,
-    .form-card h2, .form-card h3,
+    label, 
+    label p,
+    p,
+    h2, h3,
     div[data-testid="stWidgetLabel"] p,
     div[data-testid="stWidgetLabel"] label,
     label[data-testid="stWidgetLabel"] * {
@@ -206,10 +205,9 @@ with tab_form:
         </div>
     ''', unsafe_allow_html=True)
 
-    # Wrap inputs inside st.container and apply single .form-card class
-    with st.container():
-        st.markdown('<div class="form-card">', unsafe_allow_html=True)
-        
+    # Clean native container (no raw div tags)
+    form_container = st.container()
+    with form_container:
         email = st.text_input("Email Address *", key=f"email_{v}")
         flight = st.selectbox(
             "Flight *", 
@@ -347,8 +345,6 @@ with tab_form:
                         st.rerun()
                 except Exception as e:
                     st.error(f"Error submitting form: {e}")
-                        
-        st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # TAB 2: LIVE REQUEST DASHBOARD (PIN PROTECTED)
