@@ -31,13 +31,13 @@ st.markdown("""
         display: none !important;
     }
     
-    /* SHRUNK TITLE BANNER CARD */
+    /* HEADER TITLE CARD ONLY */
     .title-card {
         background-color: #00308f !important;
         padding: 15px 25px !important;
         border-radius: 12px;
         box-shadow: 0 4px 20px rgba(0,0,0,0.6);
-        margin-bottom: 20px;
+        margin-bottom: 25px;
     }
     .title-card h1 {
         color: #ffffff !important;
@@ -47,15 +47,7 @@ st.markdown("""
         font-size: 2rem !important;
     }
     
-    /* TARGET STREAMLIT FORM CONTAINER DIRECTLY FOR BLUE BACKGROUND */
-    div[data-testid="stVerticalBlock"] > div:has(div[data-testid="stTextInput"]) {
-        background-color: #00308f !important;
-        padding: 30px !important;
-        border-radius: 12px !important;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important;
-    }
-    
-    /* ALL FIELD LABELS AND HEADINGS IN WHITE */
+    /* TEXT & FIELD LABELS IN WHITE WITH SHADOW FOR READABILITY OVER BACKGROUND */
     label, 
     label p,
     p,
@@ -65,12 +57,14 @@ st.markdown("""
     label[data-testid="stWidgetLabel"] * {
         color: #ffffff !important;
         font-weight: 700 !important;
+        text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
     }
     
-    /* File Uploader Container Styling */
+    /* FILE UPLOADER CONTAINER STYLING */
     div[data-testid="stFileUploader"] section {
         border: 2px dashed #ffffff !important;
         border-radius: 8px !important;
+        background-color: rgba(0, 48, 143, 0.4) !important;
     }
     </style>
 """, unsafe_allow_html=True)
