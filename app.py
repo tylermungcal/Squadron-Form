@@ -39,33 +39,25 @@ st.markdown("""
         margin-bottom: 25px;
     }
     
-    /* FORCE FIELD LABELS ABOVE BOXES TO BOLD BLACK */
+    /* ALL FIELD LABELS AND HEADINGS IN WHITE */
     .form-card label, 
     .form-card label p,
+    .form-card p,
+    .form-card h1, .form-card h2, .form-card h3,
     div[data-testid="stWidgetLabel"] p,
     div[data-testid="stWidgetLabel"] label,
     label[data-testid="stWidgetLabel"] * {
-        color: #000000 !important;
-        font-weight: 700 !important;
-    }
-
-    /* Keep header title white */
-    .form-card h1, .form-card h2, .form-card h3 {
         color: #ffffff !important;
         font-weight: 700 !important;
     }
     
-    /* UNIFORM WHITE INPUT BOXES & SELECT CONTAINERS */
+    /* FORCE ALL INPUT BOXES & DROPDOWNS TO WHITE WITH BLUE TEXT */
     div[data-baseweb="select"],
     div[data-baseweb="select"] > div,
-    div[data-baseweb="select"] * {
-        background-color: #ffffff !important;
-        color: #00308f !important;
-        border-radius: 6px !important;
-    }
-
+    div[data-baseweb="select"] *,
     div[data-baseweb="input"],
     div[data-baseweb="input"] > div,
+    div[data-baseweb="input"] input,
     .stTextInput input,
     .stDateInput input,
     div[data-testid="stDateInput"] > div,
@@ -73,6 +65,7 @@ st.markdown("""
         background-color: #ffffff !important;
         color: #00308f !important;
         border-radius: 6px !important;
+        border: none !important;
     }
 
     /* SVG arrow icons inside dropdowns */
@@ -277,9 +270,14 @@ with tab_form:
         st.success("✅ Submitted successfully! The form has been reset for a new entry.")
         st.session_state.form_submitted_success = False
 
+    st.markdown('''
+        <div class="form-card">
+            <h1 style="text-align: center; color: #ffffff; margin-bottom: 25px;">Squadron 153 Promotion Form Requests</h1>
+        </div>
+    ''', unsafe_allow_html=True)
+
     with st.container():
         st.markdown('<div class="form-card">', unsafe_allow_html=True)
-        st.markdown('<h1 style="text-align: center; color: #ffffff; margin-bottom: 25px;">Squadron 153 Promotion Form Requests</h1>', unsafe_allow_html=True)
         
         email = st.text_input("Email Address *", key=f"email_{v}")
         flight = st.selectbox(
