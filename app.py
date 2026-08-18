@@ -38,26 +38,40 @@ st.markdown("""
         box-shadow: 0 4px 20px rgba(0,0,0,0.6);
         margin-bottom: 25px;
     }
-    .form-card label, .form-card p, .form-card h1, .form-card h2, .form-card .stCaption,
-    div[data-testid="stMarkdownContainer"] p {
-        color: #ffffff !important;
-        font-weight: 600 !important;
+    
+    /* CHANGE INPUT LABELS / TEXT ABOVE BOXES TO BLACK */
+    .form-card label, 
+    .form-card label p,
+    div[data-testid="stWidgetLabel"] p,
+    div[data-testid="stWidgetLabel"] label {
+        color: #000000 !important;
+        font-weight: 700 !important;
     }
+
+    /* Keep main headings white */
+    .form-card h1, .form-card h2, .form-card h3 {
+        color: #ffffff !important;
+        font-weight: 700 !important;
+    }
+    
+    /* SYSTEM THEME UNIFORM INPUT BOXES (TEXT, SELECT, DATE) */
     div[data-baseweb="select"] > div,
-    div[data-testid="stForm"] input,
+    div[data-baseweb="input"],
     .stTextInput input,
-    .stDateInput input {
+    .stDateInput input,
+    div[data-testid="stDateInput"] > div {
         background-color: #ffffff !important;
         color: #00308f !important;
         border-radius: 6px !important;
+        border: 1px solid #cccccc !important;
+    }
+
+    /* Ensure dropdown option text stays navy blue */
+    div[data-baseweb="select"] * {
+        color: #00308f !important;
     }
     
-    /* Fix Password / PIN field text visibility and position toggle eye button on far right */
-    div[data-baseweb="input"] {
-        background-color: #ffffff !important;
-        border-radius: 6px !important;
-        position: relative !important;
-    }
+    /* Password / PIN input field positioning */
     div[data-baseweb="input"] input {
         color: #00308f !important;
         background-color: transparent !important;
@@ -93,7 +107,6 @@ st.markdown("""
         height: 3em !important;
     }
     
-    /* Ensure all text/icons inside buttons render in blue */
     div.stButton > button *,
     div[data-testid="stForm"] button *,
     div[data-testid="stForm"] button p {
@@ -111,6 +124,7 @@ st.markdown("""
         color: #002060 !important;
     }
     
+    /* File Uploader Container Styling */
     div[data-testid="stFileUploader"] section {
         background-color: #ffffff !important;
         border: 2px dashed #00308f !important;
