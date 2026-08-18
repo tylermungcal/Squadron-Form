@@ -31,9 +31,26 @@ st.markdown("""
         display: none !important;
     }
     
+    /* SHRUNK TITLE BANNER CARD */
+    .title-card {
+        background-color: #00308f !important;
+        padding: 15px 25px !important;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+        margin-bottom: 20px;
+    }
+    .title-card h1 {
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        font-size: 2rem !important;
+    }
+    
+    /* MAIN FORM CARD CONTAINING ALL INPUTS */
     .form-card {
         background-color: #00308f !important;
-        padding: 35px;
+        padding: 30px;
         border-radius: 12px;
         box-shadow: 0 4px 20px rgba(0,0,0,0.6);
         margin-bottom: 25px;
@@ -43,7 +60,7 @@ st.markdown("""
     .form-card label, 
     .form-card label p,
     .form-card p,
-    .form-card h1, .form-card h2, .form-card h3,
+    .form-card h2, .form-card h3,
     div[data-testid="stWidgetLabel"] p,
     div[data-testid="stWidgetLabel"] label,
     label[data-testid="stWidgetLabel"] * {
@@ -51,98 +68,10 @@ st.markdown("""
         font-weight: 700 !important;
     }
     
-    /* FORCE ALL INPUT BOXES & DROPDOWNS TO WHITE WITH BLUE TEXT */
-    div[data-baseweb="select"],
-    div[data-baseweb="select"] > div,
-    div[data-baseweb="select"] *,
-    div[data-baseweb="input"],
-    div[data-baseweb="input"] > div,
-    div[data-baseweb="input"] input,
-    .stTextInput input,
-    .stDateInput input,
-    div[data-testid="stDateInput"] > div,
-    div[data-testid="stDateInput"] input {
-        background-color: #ffffff !important;
-        color: #00308f !important;
-        border-radius: 6px !important;
-        border: none !important;
-    }
-
-    /* SVG arrow icons inside dropdowns */
-    div[data-baseweb="select"] svg {
-        fill: #00308f !important;
-    }
-    
-    /* Password / PIN input field positioning */
-    div[data-baseweb="input"] input {
-        color: #00308f !important;
-        background-color: transparent !important;
-        padding-right: 50px !important;
-    }
-    div[data-baseweb="input"] button {
-        background-color: transparent !important;
-        border: none !important;
-        position: absolute !important;
-        right: 12px !important;
-        top: 50% !important;
-        transform: translateY(-50%) !important;
-        width: auto !important;
-        height: auto !important;
-        padding: 4px !important;
-        margin: 0 !important;
-        z-index: 10 !important;
-    }
-    div[data-baseweb="input"] button svg {
-        fill: #00308f !important;
-    }
-    
-    /* General Button Styling */
-    div.stButton > button,
-    div[data-testid="stForm"] button {
-        background-color: #ffffff !important;
-        color: #00308f !important;
-        font-weight: bold !important;
-        font-size: 16px !important;
-        border-radius: 6px !important;
-        width: 100% !important;
-        border: 2px solid #ffffff !important;
-        height: 3em !important;
-    }
-    
-    div.stButton > button *,
-    div[data-testid="stForm"] button *,
-    div[data-testid="stForm"] button p {
-        color: #00308f !important;
-        font-weight: bold !important;
-    }
-    
-    div.stButton > button:hover,
-    div[data-testid="stForm"] button:hover {
-        background-color: #e2e8f0 !important;
-        color: #002060 !important;
-    }
-    div.stButton > button:hover *,
-    div[data-testid="stForm"] button:hover * {
-        color: #002060 !important;
-    }
-    
     /* File Uploader Container Styling */
     div[data-testid="stFileUploader"] section {
-        background-color: #ffffff !important;
-        border: 2px dashed #00308f !important;
+        border: 2px dashed #ffffff !important;
         border-radius: 8px !important;
-    }
-    div[data-testid="stFileUploader"] section * {
-        color: #00308f !important;
-        font-weight: 600 !important;
-    }
-    div[data-testid="stFileUploader"] button {
-        background-color: #00308f !important;
-        border: 1px solid #00308f !important;
-        color: #ffffff !important;
-    }
-    div[data-testid="stFileUploader"] button * {
-        color: #ffffff !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -270,154 +199,155 @@ with tab_form:
         st.success("✅ Submitted successfully! The form has been reset for a new entry.")
         st.session_state.form_submitted_success = False
 
+    # Shrunk Header Banner
     st.markdown('''
-        <div class="form-card">
-            <h1 style="text-align: center; color: #ffffff; margin-bottom: 25px;">Squadron 153 Promotion Form Requests</h1>
+        <div class="title-card">
+            <h1 style="text-align: center;">Squadron 153 Promotion Form Requests</h1>
         </div>
     ''', unsafe_allow_html=True)
 
-    with st.container():
-        st.markdown('<div class="form-card">', unsafe_allow_html=True)
+    # Main Form Container (Single Blue Card wrapping all fields)
+    st.markdown('<div class="form-card">', unsafe_allow_html=True)
+    
+    email = st.text_input("Email Address *", key=f"email_{v}")
+    flight = st.selectbox(
+        "Flight *", 
+        ["-- Select --", "Line Staff", "Support Staff", "Alpha Flight", "Bravo Flight", "Charlie Flight", "CTF"], 
+        key=f"flight_{v}"
+    )
+    first_name = st.text_input("First Name *", key=f"first_name_{v}")
+    last_name = st.text_input("Last Name *", key=f"last_name_{v}")
+    
+    request_type = st.selectbox(
+        "Requesting a... *", 
+        [
+            "-- Select --", "Drill Test", "PRB", "CPFT (4th Wednesday)", 
+            "Milestone Exam", "Essay Submission", "Technical Writing Submission (SDA)", "Specialty Exam"
+        ],
+        key=f"request_type_{v}"
+    )
+
+    achievement = None
+    has_achievement_field = False
+    if request_type == "Drill Test":
+        has_achievement_field = True
+        achievement = st.selectbox("For what achievement / award? *", ["-- Select --"] + drill_list, key=f"achievement_{v}")
+    elif request_type == "Milestone Exam":
+        has_achievement_field = True
+        achievement = st.selectbox("For what achievement / award? *", ["-- Select --"] + milestone_list, key=f"achievement_{v}")
+    elif request_type == "Essay Submission":
+        has_achievement_field = True
+        achievement = st.selectbox("For what achievement / award? *", ["-- Select --"] + essay_list, key=f"achievement_{v}")
+    elif request_type == "Technical Writing Submission (SDA)":
+        has_achievement_field = True
+        achievement = st.selectbox("For what achievement / award? *", ["-- Select --"] + sda_list, key=f"achievement_{v}")
+    elif request_type == "PRB":
+        has_achievement_field = True
+        achievement = st.selectbox("For what achievement / award? *", ["-- Select --"] + full_list, key=f"achievement_{v}")
+
+    specialty_exam = None
+    if request_type == "Specialty Exam":
+        specialty_exam = st.selectbox("Exam Requested *", ["-- Select Exam --", "ICUT", "Other"], key=f"specialty_exam_{v}")
+
+    meeting_date = st.date_input(
+        "Requested Meeting Date *", 
+        value=date.today(), 
+        min_value=date.today(), 
+        key=f"meeting_date_{v}"
+    )
+
+    uploaded_file = None
+    if request_type in ["PRB", "Essay Submission", "Technical Writing Submission (SDA)", "Specialty Exam"]:
+        uploaded_file = st.file_uploader(
+            "Upload Required Document / CAPF Form *", 
+            type=["pdf", "png", "jpg", "docx"], 
+            key=f"uploaded_file_{v}"
+        )
+
+    # Validation Calculations
+    valid_wednesday = is_valid_training_wednesday(meeting_date) if meeting_date else False
+    valid_deadline = is_submitted_before_friday_deadline(meeting_date) if meeting_date else False
+
+    # Required Field Validation Checks
+    is_invalid_email = st.session_state.submitted and not email
+    is_invalid_flight = st.session_state.submitted and (flight == "-- Select --")
+    is_invalid_fname = st.session_state.submitted and not first_name
+    is_invalid_lname = st.session_state.submitted and not last_name
+    is_invalid_req = st.session_state.submitted and (request_type == "-- Select --")
+    is_invalid_achieve = st.session_state.submitted and has_achievement_field and (not achievement or achievement == "-- Select --")
+    is_invalid_date = st.session_state.submitted and (not valid_wednesday or not valid_deadline)
+
+    # Dynamic Red Border Highlights
+    red_css = ""
+    if is_invalid_email:
+        red_css += 'div[data-testid="stTextInput"]:has(input[aria-label="Email Address *"]) input { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
+    if is_invalid_flight:
+        red_css += 'div[data-testid="stSelectbox"]:has(label[aria-label="Flight *"]) div[data-baseweb="select"] > div { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
+    if is_invalid_fname:
+        red_css += 'div[data-testid="stTextInput"]:has(input[aria-label="First Name *"]) input { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
+    if is_invalid_lname:
+        red_css += 'div[data-testid="stTextInput"]:has(input[aria-label="Last Name *"]) input { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
+    if is_invalid_req:
+        red_css += 'div[data-testid="stSelectbox"]:has(label[aria-label="Requesting a... *"]) div[data-baseweb="select"] > div { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
+    if is_invalid_achieve:
+        red_css += 'div[data-testid="stSelectbox"]:has(label[aria-label*="achievement"]) div[data-baseweb="select"] > div { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
+    if is_invalid_date:
+        red_css += 'div[data-testid="stDateInput"] input { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
+
+    if red_css:
+        st.markdown(f"<style>{red_css}</style>", unsafe_allow_html=True)
+
+    if st.button("Submit Request"):
+        st.session_state.submitted = True
         
-        email = st.text_input("Email Address *", key=f"email_{v}")
-        flight = st.selectbox(
-            "Flight *", 
-            ["-- Select --", "Line Staff", "Support Staff", "Alpha Flight", "Bravo Flight", "Charlie Flight", "CTF"], 
-            key=f"flight_{v}"
-        )
-        first_name = st.text_input("First Name *", key=f"first_name_{v}")
-        last_name = st.text_input("Last Name *", key=f"last_name_{v}")
-        
-        request_type = st.selectbox(
-            "Requesting a... *", 
-            [
-                "-- Select --", "Drill Test", "PRB", "CPFT (4th Wednesday)", 
-                "Milestone Exam", "Essay Submission", "Technical Writing Submission (SDA)", "Specialty Exam"
-            ],
-            key=f"request_type_{v}"
-        )
-
-        achievement = None
-        has_achievement_field = False
-        if request_type == "Drill Test":
-            has_achievement_field = True
-            achievement = st.selectbox("For what achievement / award? *", ["-- Select --"] + drill_list, key=f"achievement_{v}")
-        elif request_type == "Milestone Exam":
-            has_achievement_field = True
-            achievement = st.selectbox("For what achievement / award? *", ["-- Select --"] + milestone_list, key=f"achievement_{v}")
-        elif request_type == "Essay Submission":
-            has_achievement_field = True
-            achievement = st.selectbox("For what achievement / award? *", ["-- Select --"] + essay_list, key=f"achievement_{v}")
-        elif request_type == "Technical Writing Submission (SDA)":
-            has_achievement_field = True
-            achievement = st.selectbox("For what achievement / award? *", ["-- Select --"] + sda_list, key=f"achievement_{v}")
-        elif request_type == "PRB":
-            has_achievement_field = True
-            achievement = st.selectbox("For what achievement / award? *", ["-- Select --"] + full_list, key=f"achievement_{v}")
-
-        specialty_exam = None
-        if request_type == "Specialty Exam":
-            specialty_exam = st.selectbox("Exam Requested *", ["-- Select Exam --", "ICUT", "Other"], key=f"specialty_exam_{v}")
-
-        meeting_date = st.date_input(
-            "Requested Meeting Date *", 
-            value=date.today(), 
-            min_value=date.today(), 
-            key=f"meeting_date_{v}"
-        )
-
-        uploaded_file = None
-        if request_type in ["PRB", "Essay Submission", "Technical Writing Submission (SDA)", "Specialty Exam"]:
-            uploaded_file = st.file_uploader(
-                "Upload Required Document / CAPF Form *", 
-                type=["pdf", "png", "jpg", "docx"], 
-                key=f"uploaded_file_{v}"
-            )
-
-        # Validation Calculations
-        valid_wednesday = is_valid_training_wednesday(meeting_date) if meeting_date else False
-        valid_deadline = is_submitted_before_friday_deadline(meeting_date) if meeting_date else False
-
-        # Required Field Validation Checks
-        is_invalid_email = st.session_state.submitted and not email
-        is_invalid_flight = st.session_state.submitted and (flight == "-- Select --")
-        is_invalid_fname = st.session_state.submitted and not first_name
-        is_invalid_lname = st.session_state.submitted and not last_name
-        is_invalid_req = st.session_state.submitted and (request_type == "-- Select --")
-        is_invalid_achieve = st.session_state.submitted and has_achievement_field and (not achievement or achievement == "-- Select --")
-        is_invalid_date = st.session_state.submitted and (not valid_wednesday or not valid_deadline)
-
-        # Dynamic Red Border Highlights
-        red_css = ""
-        if is_invalid_email:
-            red_css += 'div[data-testid="stTextInput"]:has(input[aria-label="Email Address *"]) input { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
-        if is_invalid_flight:
-            red_css += 'div[data-testid="stSelectbox"]:has(label[aria-label="Flight *"]) div[data-baseweb="select"] > div { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
-        if is_invalid_fname:
-            red_css += 'div[data-testid="stTextInput"]:has(input[aria-label="First Name *"]) input { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
-        if is_invalid_lname:
-            red_css += 'div[data-testid="stTextInput"]:has(input[aria-label="Last Name *"]) input { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
-        if is_invalid_req:
-            red_css += 'div[data-testid="stSelectbox"]:has(label[aria-label="Requesting a... *"]) div[data-baseweb="select"] > div { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
-        if is_invalid_achieve:
-            red_css += 'div[data-testid="stSelectbox"]:has(label[aria-label*="achievement"]) div[data-baseweb="select"] > div { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
-        if is_invalid_date:
-            red_css += 'div[data-testid="stDateInput"] input { border: 2px solid #ff4b4b !important; background-color: #ffe6e6 !important; }\n'
-
-        if red_css:
-            st.markdown(f"<style>{red_css}</style>", unsafe_allow_html=True)
-
-        if st.button("Submit Request"):
-            st.session_state.submitted = True
+        if (not email or flight == "-- Select --" or not first_name or not last_name 
+            or request_type == "-- Select --" or (has_achievement_field and (not achievement or achievement == "-- Select --"))):
+            st.error("⚠️ Please fill in all required fields highlighted in red.")
+        elif not valid_wednesday:
+            st.error("⚠️ Selected date must be a valid Wednesday meeting!")
+        elif not valid_deadline:
+            st.error("⚠️ Request deadline passed! Forms must be submitted by Friday 23:59 prior to the requested Wednesday.")
+        else:
+            file_url = ""
             
-            if (not email or flight == "-- Select --" or not first_name or not last_name 
-                or request_type == "-- Select --" or (has_achievement_field and (not achievement or achievement == "-- Select --"))):
-                st.error("⚠️ Please fill in all required fields highlighted in red.")
-            elif not valid_wednesday:
-                st.error("⚠️ Selected date must be a valid Wednesday meeting!")
-            elif not valid_deadline:
-                st.error("⚠️ Request deadline passed! Forms must be submitted by Friday 23:59 prior to the requested Wednesday.")
-            else:
-                file_url = ""
-                
-                # Upload to Drive
-                if uploaded_file is not None:
-                    with st.spinner("Uploading file to Google Drive..."):
-                        try:
-                            file_url = upload_to_drive(uploaded_file)
-                        except Exception as e:
-                            st.error(f"⚠️ Drive API Upload Error: {e}")
-                            st.exception(e)
+            # Upload to Drive
+            if uploaded_file is not None:
+                with st.spinner("Uploading file to Google Drive..."):
+                    try:
+                        file_url = upload_to_drive(uploaded_file)
+                    except Exception as e:
+                        st.error(f"⚠️ Drive API Upload Error: {e}")
+                        st.exception(e)
 
-                WEBHOOK_URL = "https://script.google.com/macros/s/AKfycby_iDEd9a3hmJQyLhKuP9833KirbBK19Mki2K43eNOSs6iVLYDZq2FEw66V06Bb65uP6g/exec"
+            WEBHOOK_URL = "https://script.google.com/macros/s/AKfycby_iDEd9a3hmJQyLhKuP9833KirbBK19Mki2K43eNOSs6iVLYDZq2FEw66V06Bb65uP6g/exec"
+            
+            payload = {
+                "email": email,
+                "flight": flight,
+                "firstName": first_name,
+                "lastName": last_name,
+                "requestType": request_type,
+                "achievement": achievement if achievement else "",
+                "specialtyExam": specialty_exam if specialty_exam else "",
+                "meetingDate": str(meeting_date) if meeting_date else "",
+                "fileUrl": file_url
+            }
+            
+            try:
+                with st.spinner("Submitting request..."):
+                    response = requests.post(WEBHOOK_URL, json=payload, timeout=30)
                 
-                payload = {
-                    "email": email,
-                    "flight": flight,
-                    "firstName": first_name,
-                    "lastName": last_name,
-                    "requestType": request_type,
-                    "achievement": achievement if achievement else "",
-                    "specialtyExam": specialty_exam if specialty_exam else "",
-                    "meetingDate": str(meeting_date) if meeting_date else "",
-                    "fileUrl": file_url
-                }
-                
-                try:
-                    with st.spinner("Submitting request..."):
-                        response = requests.post(WEBHOOK_URL, json=payload, timeout=30)
+                if "Error" in response.text or "<!DOCTYPE html>" in response.text:
+                    st.error("⚠️ Submission failed! Google Script returned an authorization or execution error.")
+                else:
+                    st.session_state.form_submitted_success = True
+                    st.session_state.submitted = False
+                    st.session_state.form_version += 1
+                    st.rerun()
+            except Exception as e:
+                st.error(f"Error submitting form: {e}")
                     
-                    if "Error" in response.text or "<!DOCTYPE html>" in response.text:
-                        st.error("⚠️ Submission failed! Google Script returned an authorization or execution error.")
-                    else:
-                        st.session_state.form_submitted_success = True
-                        st.session_state.submitted = False
-                        st.session_state.form_version += 1
-                        st.rerun()
-                except Exception as e:
-                    st.error(f"Error submitting form: {e}")
-                        
-        st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # TAB 2: LIVE REQUEST DASHBOARD (PIN PROTECTED)
