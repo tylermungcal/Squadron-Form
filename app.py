@@ -91,9 +91,14 @@ def upload_to_drive(uploaded_file):
         "parents": [creds_data["folder_id"]],
     }
 
+    # Reset file buffer pointer to the beginning
+    uploaded_file.seek(0)
+
+    # Stream file directly in 1MB chunks to save memory
     media = MediaIoBaseUpload(
-        io.BytesIO(uploaded_file.getvalue()),
+        uploaded_file,
         mimetype=uploaded_file.type or "application/octet-stream",
+        chunksize=1024 * 1024,
         resumable=True,
     )
 
