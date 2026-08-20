@@ -612,12 +612,13 @@ with tab_dashboard:
 with tab_progress:
     st.markdown("### Cadet Progress Overview")
     if not progress_df.empty:
-        # Map source sheet column names to clean target display names
+        # Standardize sheet column names to requested display names
         column_mapping = {
             "Cadet Name": "Cadet Name",
             "CAP ID": "CAPID",
             "CAPID": "CAPID",
             "Assigned Flight": "Assigned Flight",
+            "Achv Working Towards": "Achievement Working Towards",
             "Achievement Working Towards": "Achievement Working Towards",
             "Leadership": "Leadership",
             "Drill Test/ AE Req Date": "Drill Test AE Req Date",
@@ -629,10 +630,12 @@ with tab_progress:
             "PT Expiry": "PT Expiry"
         }
         
-        # Rename existing columns in dataframe to standardized names
-        df_display = progress_df.rename(columns=column_mapping)
+        # Clean dataframe headers
+        df_display = progress_df.copy()
+        df_display.columns = df_display.columns.str.strip()
+        df_display = df_display.rename(columns=column_mapping)
 
-        # 11 Target columns requested
+        # 11 Target display columns
         target_columns = [
             "Cadet Name",
             "CAPID",
@@ -647,19 +650,22 @@ with tab_progress:
             "PT Expiry"
         ]
 
-        # Build dropdown options containing both Cadet Name and CAPID
+        # Build dropdown options for Name & CAPID searching
         search_options = [""]
         option_map = {}
 
         for idx, row in df_display.iterrows():
             name = str(row["Cadet Name"]).strip() if "Cadet Name" in df_display.columns and pd.notna(row["Cadet Name"]) else ""
             
-            # Format CAPID cleanly without decimals
+            # Convert float/numeric CAPIDs cleanly to text strings
             capid_raw = row["CAPID"] if "CAPID" in df_display.columns else ""
-            capid = str(int(capid_raw)).strip() if pd.notna(capid_raw) and str(capid_raw).replace('.0','').isdigit() else str(capid_raw).strip()
+            if pd.notna(capid_raw):
+                capid_str = str(capid_raw).split('.')[0].strip()
+            else:
+                capid_str = ""
 
-            if name or capid:
-                label = f"{name} (CAPID: {capid})" if name and capid else (name or f"CAPID: {capid}")
+            if name or capid_str:
+                label = f"{name} (CAPID: {capid_str})" if name and capid_str else (name or f"CAPID: {capid_str}")
                 search_options.append(label)
                 option_map[label] = idx
 
@@ -670,12 +676,12 @@ with tab_progress:
             placeholder="Type Name or CAPID..."
         )
 
-        # Display filtered dataframe when cadet is explicitly selected
+        # Render dataframe when cadet selected
         if selected_option and selected_option in option_map:
             selected_idx = option_map[selected_option]
             filtered_df = df_display.iloc[[selected_idx]]
 
-            # Keep only the target columns that exist in the dataset
+            # Keep only available target columns in explicit order
             available_cols = [col for col in target_columns if col in filtered_df.columns]
             st.dataframe(filtered_df[available_cols], use_container_width=True, hide_index=True)
         else:
