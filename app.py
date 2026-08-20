@@ -590,10 +590,23 @@ with tab_req:
 # ---------------------------------------------------------
 with tab_dashboard:
     st.markdown("### Live Request Status Dashboard")
-    if not backend_df.empty:
-        st.dataframe(backend_df, use_container_width=True)
+    
+    # Password Lock Gate
+    dashboard_password = st.text_input("Enter Dashboard Password:", type="password", key="dash_pass")
+    
+    if dashboard_password == "1530":
+        st.success("Access Granted")
+        st.markdown("---")
+        if not backend_df.empty:
+            st.dataframe(backend_df, use_container_width=True)
+        else:
+            st.info("No requests currently recorded.")
+    elif dashboard_password != "":
+        st.error("Incorrect password. Access denied.")
     else:
-        st.info("No requests currently recorded.")
+        st.warning("🔒 This dashboard is password protected. Please enter the password above.")
+
+
 
 # ---------------------------------------------------------
 # TAB 3: CADET PROGRESS REPORT
@@ -601,17 +614,54 @@ with tab_dashboard:
 with tab_progress:
     st.markdown("### Cadet Progress Overview")
     if not progress_df.empty:
-        if "Cadet Name" in progress_df.columns:
-            cadet_names_p = sorted([n for n in progress_df["Cadet Name"].dropna().unique() if str(n).strip()])
-            selected_p = st.selectbox("Search / View Individual Cadet:", ["-- View All Cadets --"] + cadet_names_p)
-            if selected_p != "-- View All Cadets --":
-                st.dataframe(progress_df[progress_df["Cadet Name"] == selected_p], use_container_width=True)
-            else:
-                st.dataframe(progress_df, use_container_width=True)
+        # Strictly requested 11 columns
+        target_columns = [
+            "Cadet Name",
+            "CAPID",
+            "Assigned Flight",
+            "Achievement Working Towards",
+            "Leadership",
+            "Drill Test AE Req Date",
+            "Fitness",
+            "PRB",
+            "Promotion Eligible Date",
+            "Notes",
+            "PT Expiry"
+        ]
+
+        # Build dropdown options mapping both Cadet Name and CAPID
+        search_options = [""]
+        option_map = {}
+        
+        for idx, row in progress_df.iterrows():
+            name = str(row["Cadet Name"]).strip() if "Cadet Name" in progress_df.columns and pd.notna(row["Cadet Name"]) else ""
+            capid = str(row["CAPID"]).strip() if "CAPID" in progress_df.columns and pd.notna(row["CAPID"]) else ""
+            
+            if name or capid:
+                label = f"{name} (CAPID: {capid})" if name and capid else name or capid
+                search_options.append(label)
+                option_map[label] = idx
+
+        selected_option = st.selectbox(
+            "Search Cadet by Name or CAPID:",
+            options=sorted(list(set(search_options))),
+            index=0,
+            placeholder="Type Name or CAPID..."
+        )
+
+        # Only render dataframe when a cadet is explicitly selected
+        if selected_option and selected_option in option_map:
+            selected_idx = option_map[selected_option]
+            filtered_df = progress_df.iloc[[selected_idx]]
+
+            # Filter strictly to target columns present in source sheet
+            available_cols = [col for col in target_columns if col in filtered_df.columns]
+            st.dataframe(filtered_df[available_cols], use_container_width=True, hide_index=True)
         else:
-            st.dataframe(progress_df, use_container_width=True)
+            st.info("🔍 Please search or select a cadet name or CAPID to view their progress record.")
     else:
         st.info("Cadet progress sheet currently unavailable.")
+
 
 # ---------------------------------------------------------
 # TAB 4: WEDNESDAY SCHEDULE & UOD
