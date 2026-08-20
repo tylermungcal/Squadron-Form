@@ -591,7 +591,7 @@ with tab_req:
 with tab_dashboard:
     st.markdown("### Live Request Status Dashboard")
     
-    # Password Lock Gate
+    # Password Lock
     dashboard_password = st.text_input("Enter Dashboard Password:", type="password", key="dash_pass")
     
     if dashboard_password == "1530":
@@ -612,7 +612,9 @@ with tab_dashboard:
 with tab_progress:
     st.markdown("### Cadet Progress Overview")
     if not progress_df.empty:
-        # Map EXACT sheet header names (keys) to desired display labels (values)
+        df_display = progress_df.copy()
+        
+        # Match actual Google Sheet headers to target display names
         column_mapping = {
             "Cadet Name": "Cadet Name",
             "CAP ID": "CAPID",
@@ -620,29 +622,26 @@ with tab_progress:
             "Assigned Flight": "Assigned Flight",
             "Achv Working Towards": "Achievement Working Towards",
             "Leadership": "Leadership",
-            "Drill Test/ AE Req Date": "Drill Test AE Req Date",
+            "Drill Test": "Drill Test",
+            "AE Req Date": "AE Req Date",
             "Fitness / CPFT Date": "Fitness",
-            "Fitness": "Fitness",
             "PRB": "PRB",
             "Eligible Date": "Promotion Eligible Date",
-            "Promotion Eligible Date": "Promotion Eligible Date",
             "Notes": "Notes",
             "PT Expiry": "PT Expiry"
         }
-
-        # Copy and clean dataframe headers
-        df_display = progress_df.copy()
-        df_display.columns = df_display.columns.str.strip()
+        
         df_display = df_display.rename(columns=column_mapping)
 
-        # Explicit order of the 11 target columns
+        # 11 Target columns requested
         target_columns = [
             "Cadet Name",
             "CAPID",
             "Assigned Flight",
             "Achievement Working Towards",
             "Leadership",
-            "Drill Test AE Req Date",
+            "Drill Test",
+            "AE Req Date",
             "Fitness",
             "PRB",
             "Promotion Eligible Date",
@@ -650,14 +649,13 @@ with tab_progress:
             "PT Expiry"
         ]
 
-        # Build search options for Name & CAPID
+        # Build dropdown options mapping both Name and CAPID
         search_options = [""]
         option_map = {}
 
         for idx, row in df_display.iterrows():
             name = str(row["Cadet Name"]).strip() if "Cadet Name" in df_display.columns and pd.notna(row["Cadet Name"]) else ""
             
-            # Format CAPID cleanly as an integer string
             capid_raw = row["CAPID"] if "CAPID" in df_display.columns else ""
             if pd.notna(capid_raw) and str(capid_raw).strip() != "":
                 capid_str = str(capid_raw).split('.')[0].strip()
@@ -676,12 +674,11 @@ with tab_progress:
             placeholder="Type Name or CAPID..."
         )
 
-        # Render dataframe when cadet is explicitly selected
+        # Render dataframe only when cadet is selected
         if selected_option and selected_option in option_map:
             selected_idx = option_map[selected_option]
             filtered_df = df_display.iloc[[selected_idx]]
 
-            # Keep target columns in exact requested order
             available_cols = [col for col in target_columns if col in filtered_df.columns]
             st.dataframe(filtered_df[available_cols], use_container_width=True, hide_index=True)
         else:
