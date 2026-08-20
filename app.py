@@ -174,7 +174,6 @@ def generate_wednesdays_through_dec(start_date):
 
         wednesdays.append({
             "Meeting Date": current.strftime("%d-%b-%Y"),
-            "Training Focus": cat,
             "UOD": uod,
             "4th Wed CPFT": cpft_str,
             "Status & Notes": notes
@@ -295,7 +294,6 @@ def load_schedule():
 
             condensed.append({
                 "Meeting Date": row["Meeting Date"],
-                "Training Focus": cat,
                 "UOD": uod_final,
                 "4th Wed CPFT": cpft_flag,
                 "Status & Notes": notes
