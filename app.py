@@ -606,15 +606,33 @@ with tab_dashboard:
     else:
         st.warning("🔒 This dashboard is password protected. Please enter the password above.")
 
-
-
 # ---------------------------------------------------------
 # TAB 3: CADET PROGRESS REPORT
 # ---------------------------------------------------------
 with tab_progress:
     st.markdown("### Cadet Progress Overview")
     if not progress_df.empty:
-        # Strictly requested 11 columns
+        # Map source sheet column names to clean target display names
+        column_mapping = {
+            "Cadet Name": "Cadet Name",
+            "CAP ID": "CAPID",
+            "CAPID": "CAPID",
+            "Assigned Flight": "Assigned Flight",
+            "Achievement Working Towards": "Achievement Working Towards",
+            "Leadership": "Leadership",
+            "Drill Test/ AE Req Date": "Drill Test AE Req Date",
+            "Drill Test AE Req Date": "Drill Test AE Req Date",
+            "Fitness": "Fitness",
+            "PRB": "PRB",
+            "Promotion Eligible Date": "Promotion Eligible Date",
+            "Notes": "Notes",
+            "PT Expiry": "PT Expiry"
+        }
+        
+        # Rename existing columns in dataframe to standardized names
+        df_display = progress_df.rename(columns=column_mapping)
+
+        # 11 Target columns requested
         target_columns = [
             "Cadet Name",
             "CAPID",
@@ -629,16 +647,19 @@ with tab_progress:
             "PT Expiry"
         ]
 
-        # Build dropdown options mapping both Cadet Name and CAPID
+        # Build dropdown options containing both Cadet Name and CAPID
         search_options = [""]
         option_map = {}
-        
-        for idx, row in progress_df.iterrows():
-            name = str(row["Cadet Name"]).strip() if "Cadet Name" in progress_df.columns and pd.notna(row["Cadet Name"]) else ""
-            capid = str(row["CAPID"]).strip() if "CAPID" in progress_df.columns and pd.notna(row["CAPID"]) else ""
+
+        for idx, row in df_display.iterrows():
+            name = str(row["Cadet Name"]).strip() if "Cadet Name" in df_display.columns and pd.notna(row["Cadet Name"]) else ""
             
+            # Format CAPID cleanly without decimals
+            capid_raw = row["CAPID"] if "CAPID" in df_display.columns else ""
+            capid = str(int(capid_raw)).strip() if pd.notna(capid_raw) and str(capid_raw).replace('.0','').isdigit() else str(capid_raw).strip()
+
             if name or capid:
-                label = f"{name} (CAPID: {capid})" if name and capid else name or capid
+                label = f"{name} (CAPID: {capid})" if name and capid else (name or f"CAPID: {capid}")
                 search_options.append(label)
                 option_map[label] = idx
 
@@ -649,19 +670,18 @@ with tab_progress:
             placeholder="Type Name or CAPID..."
         )
 
-        # Only render dataframe when a cadet is explicitly selected
+        # Display filtered dataframe when cadet is explicitly selected
         if selected_option and selected_option in option_map:
             selected_idx = option_map[selected_option]
-            filtered_df = progress_df.iloc[[selected_idx]]
+            filtered_df = df_display.iloc[[selected_idx]]
 
-            # Filter strictly to target columns present in source sheet
+            # Keep only the target columns that exist in the dataset
             available_cols = [col for col in target_columns if col in filtered_df.columns]
             st.dataframe(filtered_df[available_cols], use_container_width=True, hide_index=True)
         else:
             st.info("🔍 Please search or select a cadet name or CAPID to view their progress record.")
     else:
         st.info("Cadet progress sheet currently unavailable.")
-
 
 # ---------------------------------------------------------
 # TAB 4: WEDNESDAY SCHEDULE & UOD
