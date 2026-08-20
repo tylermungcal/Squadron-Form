@@ -9,31 +9,39 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 
 # ---------------------------------------------------------
-# PAGE CONFIG & BASE CSS
+# PAGE CONFIG & SOLID AF BLUE CSS
 # ---------------------------------------------------------
 st.set_page_config(page_title="Squadron 153 Request Portal", page_icon="✈️", layout="wide")
 
 st.markdown("""
     <style>
+    /* Set main background to solid Air Force Blue */
     .stApp {
-        background: url('https://raw.githubusercontent.com/tylermungcal/Squadron-Form/main/IMG_4502.jpeg') no-repeat center center fixed;
-        background-size: cover;
+        background-color: #003366 !important;
+        color: #ffffff !important;
     }
-    
+
+    /* Input fields and selects styling */
+    .stTextInput input, .stSelectbox div[data-baseweb="select"], .stDateInput input {
+        background-color: #1A4470 !important;
+        color: #ffffff !important;
+        border-radius: 6px;
+    }
+
     /* Completely hide active tab blue underline / highlight border */
-    [data-baseweb="tab-highlight"],
-    [data-baseweb="tab-border"],
-    div[data-testid="stTabs"] [data-baseweb="tab-highlight"],
+    [data-baseweb="tab-highlight"], 
+    [data-baseweb="tab-border"], 
+    div[data-testid="stTabs"] [data-baseweb="tab-highlight"], 
     div[data-testid="stTabs"] [data-baseweb="tab-border"] {
         background-color: transparent !important;
         background: none !important;
         border-bottom: none !important;
         display: none !important;
     }
-    
-    /* HEADER TITLE CARD ONLY */
+
+    /* HEADER TITLE CARD */
     .title-card {
-        background-color: #00308f !important;
+        background-color: #002244 !important;
         padding: 15px 25px !important;
         border-radius: 12px;
         box-shadow: 0 4px 20px rgba(0,0,0,0.6);
@@ -46,25 +54,31 @@ st.markdown("""
         padding: 0 !important;
         font-size: 2rem !important;
     }
-    
-    /* TEXT & FIELD LABELS IN WHITE WITH SHADOW FOR READABILITY OVER BACKGROUND */
-    label, 
-    label p,
-    p,
-    h2, h3,
-    div[data-testid="stWidgetLabel"] p,
-    div[data-testid="stWidgetLabel"] label,
-    label[data-testid="stWidgetLabel"] * {
+
+    /* TEXT & FIELD LABELS */
+    label, label p, p, h2, h3, div[data-testid="stWidgetLabel"] p, div[data-testid="stWidgetLabel"] label, label[data-testid="stWidgetLabel"] * {
         color: #ffffff !important;
         font-weight: 700 !important;
-        text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
     }
-    
+
     /* FILE UPLOADER CONTAINER STYLING */
     div[data-testid="stFileUploader"] section {
         border: 2px dashed #ffffff !important;
         border-radius: 8px !important;
-        background-color: rgba(0, 48, 143, 0.4) !important;
+        background-color: rgba(26, 68, 112, 0.6) !important;
+    }
+
+    /* BUTTON STYLING */
+    .stButton>button {
+        background-color: #1A4470 !important;
+        color: #ffffff !important;
+        border: 1px solid #FFCC00 !important;
+        border-radius: 6px !important;
+        font-weight: bold !important;
+    }
+    .stButton>button:hover {
+        background-color: #FFCC00 !important;
+        color: #003366 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -74,7 +88,6 @@ st.markdown("""
 # ---------------------------------------------------------
 def upload_to_drive(uploaded_file):
     creds_data = st.secrets["google_drive"]
-
     creds = Credentials(
         token=None,
         refresh_token=creds_data["refresh_token"],
@@ -83,7 +96,6 @@ def upload_to_drive(uploaded_file):
         client_secret=creds_data["client_secret"],
         scopes=["https://www.googleapis.com/auth/drive.file"],
     )
-
     service = build("drive", "v3", credentials=creds)
 
     file_metadata = {
@@ -91,10 +103,7 @@ def upload_to_drive(uploaded_file):
         "parents": [creds_data["folder_id"]],
     }
 
-    # Reset file buffer pointer to the beginning
     uploaded_file.seek(0)
-
-    # Stream file directly in 1MB chunks to save memory
     media = MediaIoBaseUpload(
         uploaded_file,
         mimetype=uploaded_file.type or "application/octet-stream",
@@ -113,25 +122,16 @@ def upload_to_drive(uploaded_file):
         )
         .execute()
     )
-
     return file.get("webViewLink")
 
 # ---------------------------------------------------------
 # TRAINING SCHEDULE & VALIDATION HELPERS
 # ---------------------------------------------------------
 TRAINING_SCHEDULE_DATES = [
-    date(2026, 8, 26),
-    date(2026, 9, 2),
-    date(2026, 9, 9),
-    date(2026, 9, 16),
-    date(2026, 9, 23),
-    date(2026, 9, 30),
-    date(2026, 10, 7),
-    date(2026, 10, 14),
-    date(2026, 10, 21),
-    date(2026, 11, 4),
-    date(2026, 11, 11),
-    date(2026, 12, 2),
+    date(2026, 8, 26), date(2026, 9, 2), date(2026, 9, 9),
+    date(2026, 9, 16), date(2026, 9, 23), date(2026, 9, 30),
+    date(2026, 10, 7), date(2026, 10, 14), date(2026, 10, 21),
+    date(2026, 11, 4), date(2026, 11, 11), date(2026, 12, 2),
     date(2026, 12, 9)
 ]
 
@@ -144,10 +144,8 @@ def is_submitted_before_friday_deadline(selected_date: date) -> bool:
     days_back_to_friday = (selected_date.weekday() - 4) % 7
     if days_back_to_friday == 0:
         days_back_to_friday = 7
-    
     friday_deadline_date = selected_date - timedelta(days=days_back_to_friday)
     friday_deadline_dt = datetime.combine(friday_deadline_date, datetime.max.time())
-    
     return datetime.now() <= friday_deadline_dt
 
 # ---------------------------------------------------------
@@ -156,31 +154,32 @@ def is_submitted_before_friday_deadline(selected_date: date) -> bool:
 DASHBOARD_PIN = "1530"
 
 drill_list = [
-    "Achievement 1", "Achievement 2", "Achievement 3", "Wright Brothers Award", 
+    "Achievement 1", "Achievement 2", "Achievement 3", "Wright Brothers Award",
     "Achievement 4", "Achievement 5", "Achievement 6", "Achievement 7", "Achievement 8"
 ]
+
 milestone_list = [
-    "Wright Brothers Award", "Mitchell Aerospace Exam", "Mitchell Leadership Exam", 
+    "Wright Brothers Award", "Mitchell Aerospace Exam", "Mitchell Leadership Exam",
     "Amelia Earhart Award", "Ira C. Eaker Award", "General Carl A. Spaatz Award"
 ]
+
 essay_list = ["Achievement 8", "Ira C. Eaker Award", "General Carl A. Spaatz Award"]
+
 sda_list = [
-    "Achievement 9", "Achievement 10", "Achievement 11", "Achievement 12", 
+    "Achievement 9", "Achievement 10", "Achievement 11", "Achievement 12",
     "Achievement 13", "Achievement 14", "Achievement 15", "Achievement 16"
 ]
+
 full_list = drill_list + sda_list + [
     "Billy Mitchell Award", "Amelia Earhart Award", "Ira C. Eaker Award", "General Carl A. Spaatz Award"
 ]
 
 if "submitted" not in st.session_state:
     st.session_state.submitted = False
-
 if "form_submitted_success" not in st.session_state:
     st.session_state.form_submitted_success = False
-
 if "form_version" not in st.session_state:
     st.session_state.form_version = 0
-
 if "dashboard_authenticated" not in st.session_state:
     st.session_state.dashboard_authenticated = False
 
@@ -197,29 +196,27 @@ with tab_form:
         st.success("✅ Submitted successfully! The form has been reset for a new entry.")
         st.session_state.form_submitted_success = False
 
-    # Shrunk Header Banner
+    # Header Banner
     st.markdown('''
         <div class="title-card">
             <h1 style="text-align: center;">Squadron 153 Promotion Form Requests</h1>
         </div>
     ''', unsafe_allow_html=True)
 
-    # Clean native container (no raw div tags)
     form_container = st.container()
     with form_container:
         email = st.text_input("Email Address *", key=f"email_{v}")
         flight = st.selectbox(
-            "Flight *", 
-            ["-- Select --", "Line Staff", "Support Staff", "Alpha Flight", "Bravo Flight", "Charlie Flight", "CTF"], 
+            "Flight *",
+            ["-- Select --", "Line Staff", "Support Staff", "Alpha Flight", "Bravo Flight", "Charlie Flight", "CTF"],
             key=f"flight_{v}"
         )
         first_name = st.text_input("First Name *", key=f"first_name_{v}")
         last_name = st.text_input("Last Name *", key=f"last_name_{v}")
-        
         request_type = st.selectbox(
-            "Requesting a... *", 
+            "Requesting a... *",
             [
-                "-- Select --", "Drill Test", "PRB", "CPFT (4th Wednesday)", 
+                "-- Select --", "Drill Test", "PRB", "CPFT (4th Wednesday)",
                 "Milestone Exam", "Essay Submission", "Technical Writing Submission (SDA)", "Specialty Exam"
             ],
             key=f"request_type_{v}"
@@ -227,6 +224,7 @@ with tab_form:
 
         achievement = None
         has_achievement_field = False
+
         if request_type == "Drill Test":
             has_achievement_field = True
             achievement = st.selectbox("For what achievement / award? *", ["-- Select --"] + drill_list, key=f"achievement_{v}")
@@ -248,17 +246,17 @@ with tab_form:
             specialty_exam = st.selectbox("Exam Requested *", ["-- Select Exam --", "ICUT", "Other"], key=f"specialty_exam_{v}")
 
         meeting_date = st.date_input(
-            "Requested Meeting Date *", 
-            value=date.today(), 
-            min_value=date.today(), 
+            "Requested Meeting Date *",
+            value=date.today(),
+            min_value=date.today(),
             key=f"meeting_date_{v}"
         )
 
         uploaded_file = None
         if request_type in ["PRB", "Essay Submission", "Technical Writing Submission (SDA)", "Specialty Exam"]:
             uploaded_file = st.file_uploader(
-                "Upload Required Document / CAPF Form *", 
-                type=["pdf", "png", "jpg", "docx"], 
+                "Upload Required Document / CAPF Form *",
+                type=["pdf", "png", "jpg", "docx"],
                 key=f"uploaded_file_{v}"
             )
 
@@ -297,9 +295,7 @@ with tab_form:
 
         if st.button("Submit Request"):
             st.session_state.submitted = True
-            
-            if (not email or flight == "-- Select --" or not first_name or not last_name 
-                or request_type == "-- Select --" or (has_achievement_field and (not achievement or achievement == "-- Select --"))):
+            if (not email or flight == "-- Select --" or not first_name or not last_name or request_type == "-- Select --" or (has_achievement_field and (not achievement or achievement == "-- Select --"))):
                 st.error("⚠️ Please fill in all required fields highlighted in red.")
             elif not valid_wednesday:
                 st.error("⚠️ Selected date must be a valid Wednesday meeting!")
@@ -307,8 +303,6 @@ with tab_form:
                 st.error("⚠️ Request deadline passed! Forms must be submitted by Friday 23:59 prior to the requested Wednesday.")
             else:
                 file_url = ""
-                
-                # Upload to Drive
                 if uploaded_file is not None:
                     with st.spinner("Uploading file to Google Drive..."):
                         try:
@@ -318,7 +312,6 @@ with tab_form:
                             st.exception(e)
 
                 WEBHOOK_URL = "https://script.google.com/macros/s/AKfycby_iDEd9a3hmJQyLhKuP9833KirbBK19Mki2K43eNOSs6iVLYDZq2FEw66V06Bb65uP6g/exec"
-                
                 payload = {
                     "email": email,
                     "flight": flight,
@@ -330,18 +323,17 @@ with tab_form:
                     "meetingDate": str(meeting_date) if meeting_date else "",
                     "fileUrl": file_url
                 }
-                
+
                 try:
                     with st.spinner("Submitting request..."):
                         response = requests.post(WEBHOOK_URL, json=payload, timeout=30)
-                    
-                    if "Error" in response.text or "<!DOCTYPE html>" in response.text:
-                        st.error("⚠️ Submission failed! Google Script returned an authorization or execution error.")
-                    else:
-                        st.session_state.form_submitted_success = True
-                        st.session_state.submitted = False
-                        st.session_state.form_version += 1
-                        st.rerun()
+                        if "Error" in response.text or "<!DOCTYPE html>" in response.text:
+                            st.error("⚠️ Submission failed! Google Script returned an authorization or execution error.")
+                        else:
+                            st.session_state.form_submitted_success = True
+                            st.session_state.submitted = False
+                            st.session_state.form_version += 1
+                            st.rerun()
                 except Exception as e:
                     st.error(f"Error submitting form: {e}")
 
@@ -350,7 +342,6 @@ with tab_form:
 # ---------------------------------------------------------
 with tab_dashboard:
     st.markdown("## Live Squadron Requests")
-    
     if not st.session_state.dashboard_authenticated:
         pin_input = st.text_input("Enter Staff PIN to Access Dashboard", type="password", key="pin_input_field")
         if st.button("Unlock Dashboard", key="unlock_btn"):
@@ -365,13 +356,10 @@ with tab_dashboard:
             st.rerun()
 
         SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1aWN5BSWlMHYwBzrmijnlBEhP4ZEU9sJjx3VLIxqHnTE/gviz/tq?tqx=out:csv&gid=0"
-        
         try:
             df = pd.read_csv(SHEET_CSV_URL)
-            
             if "Status" not in df.columns:
                 df["Status"] = "Pending"
-
             if "Document / File Link" in df.columns:
                 df["Document / File Link"] = df["Document / File Link"].fillna("").astype(str)
                 df["Document / File Link"] = df["Document / File Link"].apply(
