@@ -5,7 +5,7 @@ import re
 import requests
 import pandas as pd
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, timedelta
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
@@ -143,10 +143,16 @@ def generate_wednesdays_through_dec(start_date):
     while current <= end_date:
         is_cpft = is_4th_wednesday(current)
         is_5th = current.day >= 29
-        is_holiday = (current.month == 11 and current.day >= 24) or (current.month == 12 and current.day >= 24)
+        is_xmas = (current.month == 12 and current.day in [23, 24, 25])
+        is_holiday = (current.month == 11 and current.day >= 24) or (current.month == 12 and current.day >= 26)
         is_halloween = (current.month == 10 and current.day == 28)
 
-        if is_halloween:
+        if is_xmas:
+            uod = "Ugly Sweaters / Civilian"
+            notes = "🚫 No Meeting — Xmas Break"
+            cat = "Holiday Break"
+            cpft_str = "No"
+        elif is_halloween:
             uod = "Utility Uniform (ABU/OCP)"
             notes = "🎃 Halloween Party — No Requests Permitted"
             cat = "Social / Event"
@@ -212,7 +218,6 @@ def load_schedule():
             for i, row in raw_df.iterrows():
                 row_str = " ".join(row.dropna().astype(str))
                 
-                # Ignore Foxhunts
                 if "foxhunt" in row_str.lower():
                     continue
 
@@ -228,7 +233,7 @@ def load_schedule():
                         focus_val = "Standard Meeting"
                         for col_idx, cell in enumerate(row.dropna()):
                             cell_text = str(cell).strip()
-                            if "UOD:" in cell_text or "Uniform" in cell_text:
+                            if "UOD:" in cell_text or "Uniform" in cell_text or "Ugly Sweaters" in cell_text:
                                 uod_val = cell_text.replace("UOD:", "").strip()
                             elif col_idx > 2 and cell_text != date_raw and "UOD" not in cell_text:
                                 focus_val = cell_text
@@ -253,9 +258,15 @@ def load_schedule():
             
             is_cpft = is_4th_wednesday(dt) or "cpft" in f_lower
             is_halloween = (dt.month == 10 and dt.day == 28) or "halloween" in f_lower
+            is_xmas = (dt.month == 12 and dt.day == 23) or "xmas" in f_lower or "christmas" in f_lower
             is_party = is_halloween or any(kw in f_lower for kw in ["party", "social", "banquet"])
 
-            if is_party:
+            if is_xmas:
+                cat = "Holiday Break"
+                uod_final = "Ugly Sweaters / Civilian"
+                notes = "🚫 No Meeting — Xmas Break"
+                cpft_flag = "No"
+            elif is_party:
                 cat = "Social / Event"
                 uod_final = "Utility Uniform (ABU/OCP)"
                 notes = f"🎃 {row['Focus']} — No Requests Permitted" if is_halloween else f"⚠️ No Requests — Social ({row['Focus']})"
@@ -374,6 +385,14 @@ def is_drill_test_allowed(target_ach_str):
             return False
     return True
 
+def calculate_submission_deadline(target_wed_date):
+    """
+    Calculates deadline: Thursday 23:59 of the week BEFORE the target Wednesday.
+    Target Wed - 6 days = Thursday prior week.
+    """
+    thursday_prior = target_wed_date - timedelta(days=6)
+    return datetime(thursday_prior.year, thursday_prior.month, thursday_prior.day, 23, 59, 59)
+
 # ---------------------------------------------------------
 # TABS SETUP
 # ---------------------------------------------------------
@@ -467,23 +486,44 @@ with tab_req:
             st.markdown("#### Select Target Wednesday Date")
             target_date = st.date_input("Target Meeting Date:", value=datetime.now().date())
 
-            # Party / Social Event Blocking Check
-            is_halloween_date = (target_date.month == 10 and target_date.day == 28)
-            is_5th_wed = (target_date.weekday() == 2 and target_date.day >= 29)
-            if is_halloween_date or is_5th_wed:
+            # 1. Day of Week Check
+            if target_date.weekday() != 2:
                 prereq_valid = False
-                error_msgs.append("No requests are permitted on **Party or Special Event dates** (e.g., Halloween Party / 5th Wednesday).")
+                error_msgs.append("Requests can only be submitted for **Wednesday meeting dates**.")
+
+            # 2. Submission Deadline Check (Thursday 23:59 of prior week)
+            deadline_dt = calculate_submission_deadline(target_date)
+            now = datetime.now()
+            st.caption(f"🕒 **Submission Deadline for {target_date.strftime('%d-%b-%Y')}:** {deadline_dt.strftime('%A, %b %d, %Y at 23:59')}")
+            
+            if now > deadline_dt:
+                prereq_valid = False
+                error_msgs.append(f"The deadline for requesting **{target_date.strftime('%d-%b-%Y')}** passed on **{deadline_dt.strftime('%b %d at 23:59')}** (Thursday of the week prior).")
+
+            # 3. Special Event / Holiday Checks
+            is_halloween_date = (target_date.month == 10 and target_date.day == 28)
+            is_xmas_date = (target_date.month == 12 and target_date.day == 23)
+            is_5th_wed = (target_date.weekday() == 2 and target_date.day >= 29)
+            
+            if is_halloween_date or is_5th_wed or is_xmas_date:
+                prereq_valid = False
+                error_msgs.append("No requests are permitted on **Party or Holiday Break dates** (e.g., Halloween Party / Xmas Break / 5th Wednesday).")
+
+            # 4. 4th Wednesday Validation
+            is_4th_wed = is_4th_wednesday(target_date)
+            if is_4th_wed:
+                if req_type != "4th Wednesday CPFT":
+                    prereq_valid = False
+                    error_msgs.append("4th Wednesdays are reserved exclusively for **CPFT Fitness Testing**. Standard requests are not permitted.")
+                else:
+                    st.info("ℹ️ **Uniform Note:** Standard UOD is **Utility Uniform (ABU/OCP)**. Please arrive in **PTs** for testing, then change into your **Utility Uniform** after testing.")
+            elif req_type == "4th Wednesday CPFT" and not is_4th_wed:
+                prereq_valid = False
+                error_msgs.append("CPFT Testing requests are only valid on **4th Wednesdays**.")
 
             if req_type == "PRB":
                 if "Achievement 4" in working_ach or any(f"Achievement {i}" in working_ach for i in range(5, 17)):
                     st.warning("⚠️ **Reminder:** PRB Requests for Achievement 4+ must take place on a **Blues Night**.")
-
-            if req_type == "4th Wednesday CPFT":
-                if target_date.weekday() != 2:
-                    prereq_valid = False
-                    error_msgs.append("CPFT Testing must take place on a **Wednesday**.")
-                else:
-                    st.info("ℹ️ **Uniform Note:** Standard UOD is **Utility Uniform (ABU/OCP)**. Please arrive in **PTs** for testing, then change into your **Utility Uniform** after testing.")
 
             if not prereq_valid:
                 for msg in error_msgs:
@@ -593,7 +633,7 @@ with tab_progress:
 # ---------------------------------------------------------
 with tab_sched:
     st.markdown("### 📅 Upcoming Wednesday Schedule & UOD (Through Dec 2026)")
-    st.caption("Live feed from [153 Training Schedule Sheet](https://docs.google.com/spreadsheets/d/17wdWuOFBFyR507_vBITsTkI8il7k-1gDjLLPtNcCzt8/edit#gid=420770302)")
+    st.caption("Live feed from [153 Training Schedule Sheet](https://docs.google.com/spreadsheets/d/17wdWuOFBFyR507_vBITsTkI8il7k-1gDjLLPtNcCzt8/edit#gid=127391265)")
     
     display_schedule_df = load_schedule()
     
