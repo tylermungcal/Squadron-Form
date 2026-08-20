@@ -90,7 +90,7 @@ def load_cadet_progress():
 @st.cache_data(ttl=60)
 def load_submitted_backend():
     # Replace with your deployed Apps Script Web App URL
-    url = "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec"
+    url = "https://script.google.com/macros/s/AKfycby_iDEd9a3hmJQyLhKuP9833KirbBK19Mki2K43eNOSs6iVLYDZq2FEw66V06Bb65uP6g/exec"
     try:
         response = requests.get(url)
         data = response.json()
