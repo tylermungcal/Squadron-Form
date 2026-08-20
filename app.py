@@ -551,44 +551,44 @@ with tab_req:
                     comments = st.text_area("Additional Notes / Details for Staff:")
                     submit_button = st.form_submit_button("Submit Request")
 
-            if submit_button:
-                if not prereq_valid:
-                    st.error("Please resolve all validation errors before submitting.")
-                else:
-                    file_link = ""
-                    proof_link = ""
-                    with st.spinner("Processing request and uploading files..."):
-                        if uploaded_file is not None:
-                            file_link = upload_file_to_drive(uploaded_file, PRIMARY_FOLDER_ID) or ""
-                        if eservices_proof_file is not None:
-                            proof_link = upload_file_to_drive(eservices_proof_file, PROOF_FOLDER_ID) or ""
-
-                        webhook_url = "https://script.google.com/macros/s/AKfycby_iDEd9a3hmJQyLhKuP9833KirbBK19Mki2K43eNOSs6iVLYDZq2FEw66V06Bb65uP6g/exec"
-
-                        payload = {
-                            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            "cadet_name": selected_cadet,
-                            "email": email_input,
-                            "cap_id": cap_id_input,
-                            "grade": grade_input,
-                            "flight": flight_input,
-                            "request_type": req_type,
-                            "milestone_exam": selected_exam_name if req_type == "Milestone Exam" else "",
-                            "target_date": target_date.strftime("%Y-%m-%d"),
-                            "uploaded_file_url": file_link,
-                            "proof_file_url": proof_link,
-                            "comments": comments
-                        }
-
-                        try:
-                            res = requests.post(webhook_url, json=payload)
-                            if res.status_code == 200:
-                                st.success("✅ Request submitted successfully! Your submission will now appear on the backend sheet and Live Dashboard.")
-                                st.cache_data.clear()
-                            else:
-                                st.error(f"Failed to post to backend sheet. Server status code: {res.status_code}")
-                        except Exception as e:
-                            st.error(f"Error sending request payload: {e}")
+                    if submit_button:
+                        if not prereq_valid:
+                            st.error("Please resolve all validation errors before submitting.")
+                        else:
+                            file_link = ""
+                            proof_link = ""
+                            with st.spinner("Processing request and uploading files..."):
+                                if uploaded_file is not None:
+                                    file_link = upload_file_to_drive(uploaded_file, PRIMARY_FOLDER_ID) or ""
+                                if eservices_proof_file is not None:
+                                    proof_link = upload_file_to_drive(eservices_proof_file, PROOF_FOLDER_ID) or ""
+        
+                                webhook_url = "https://script.google.com/macros/s/AKfycby_iDEd9a3hmJQyLhKuP9833KirbBK19Mki2K43eNOSs6iVLYDZq2FEw66V06Bb65uP6g/exec"
+        
+                                payload = {
+                                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                    "cadet_name": selected_cadet,
+                                    "email": email_input,
+                                    "cap_id": cap_id_input,
+                                    "grade": grade_input,
+                                    "flight": flight_input,
+                                    "request_type": req_type,
+                                    "milestone_exam": selected_exam_name if req_type == "Milestone Exam" else "",
+                                    "target_date": target_date.strftime("%Y-%m-%d"),
+                                    "uploaded_file_url": file_link,
+                                    "proof_file_url": proof_link,
+                                    "comments": comments
+                                }
+        
+                                try:
+                                    res = requests.post(webhook_url, json=payload)
+                                    if res.status_code == 200:
+                                        st.success("✅ Request submitted successfully! Your submission will now appear on the backend sheet and Live Dashboard.")
+                                        st.cache_data.clear()
+                                    else:
+                                        st.error(f"Failed to post to backend sheet. Server status code: {res.status_code}")
+                                except Exception as e:
+                                    st.error(f"Error sending request payload: {e}")
 
 # ---------------------------------------------------------
 # TAB 2: LIVE REQUEST DASHBOARD
