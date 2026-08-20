@@ -548,8 +548,8 @@ with tab_req:
                     st.info("ℹ️ **4th Wednesday Note:** Arrive in PTs for testing at 1800, then change into Utility after testing.")
 
                 with st.form("cadet_request_form", clear_on_submit=True):
-            comments = st.text_area("Additional Notes / Details for Staff:")
-            submit_button = st.form_submit_button("Submit Request")
+                    comments = st.text_area("Additional Notes / Details for Staff:")
+                    submit_button = st.form_submit_button("Submit Request")
 
             if submit_button:
                 if not prereq_valid:
@@ -563,7 +563,6 @@ with tab_req:
                         if eservices_proof_file is not None:
                             proof_link = upload_file_to_drive(eservices_proof_file, PROOF_FOLDER_ID) or ""
 
-                        # Your Apps Script Web App URL
                         webhook_url = "https://script.google.com/macros/s/AKfycby_iDEd9a3hmJQyLhKuP9833KirbBK19Mki2K43eNOSs6iVLYDZq2FEw66V06Bb65uP6g/exec"
 
                         payload = {
