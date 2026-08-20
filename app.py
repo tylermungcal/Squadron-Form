@@ -626,17 +626,28 @@ with tab_dashboard:
         if not fresh_backend_df.empty:
             df_edit = fresh_backend_df.copy()
             
-            # 1. Clean Target Date column (removes 'T00:00:00.000Z')
-            target_cols = [c for c in df_edit.columns if "target" in c.lower() or "date" in c.lower()]
-            for tc in target_cols:
-                df_edit[tc] = df_edit[tc].astype(str).apply(lambda x: str(x).split("T")[0] if "T" in str(x) else str(x))
+            # Clean Timestamps and Target Dates (removes ISO 'T' & 'Z' formatting)
+            for col in df_edit.columns:
+                col_lower = col.lower()
+                if "time" in col_lower or "date" in col_lower or "target" in col_lower:
+                    df_edit[col] = df_edit[col].astype(str).apply(
+                        lambda x: str(x).replace("T", " ").split(".")[0].replace("Z", "") if "T" in str(x) else str(x)
+                    )
 
-            # 2. Add Status column if missing from backend dataframe
+            # Rename 'Target Date' or similar column to 'Meeting Date'
+            rename_dict = {}
+            for col in df_edit.columns:
+                if "target" in col.lower() or "date" in col.lower() and "time" not in col.lower():
+                    rename_dict[col] = "Meeting Date"
+            if rename_dict:
+                df_edit.rename(columns=rename_dict, inplace=True)
+
+            # Ensure Status column exists
             status_col_name = "Status"
             if status_col_name not in df_edit.columns:
                 df_edit[status_col_name] = "Pending"
 
-            # 3. Configure columns for st.data_editor
+            # Configure st.data_editor column types & displays
             column_config = {
                 status_col_name: st.column_config.SelectboxColumn(
                     "Status",
@@ -646,9 +657,9 @@ with tab_dashboard:
                 )
             }
 
-            # Hyperlink URL columns as 'View Document'
+            # Hyperlink all URL/File columns as 'View Document'
             for col in df_edit.columns:
-                if "url" in col.lower() or "file" in col.lower() or "proof" in col.lower():
+                if any(kw in col.lower() for kw in ["url", "file", "proof", "link", "upload"]):
                     column_config[col] = st.column_config.LinkColumn(
                         col,
                         display_text="View Document"
@@ -656,7 +667,7 @@ with tab_dashboard:
 
             st.caption("💡 **Staff Tip:** You can update any request status directly in the table below.")
             
-            # Interactive Editable Dataframe
+            # Interactive Data Editor Table
             edited_df = st.data_editor(
                 df_edit,
                 column_config=column_config,
@@ -665,7 +676,7 @@ with tab_dashboard:
                 key="dashboard_editor"
             )
 
-            # Detect status changes and push back to Google Sheet
+            # Detect status updates and push back to Google Sheet
             if "dashboard_editor" in st.session_state and "edited_rows" in st.session_state["dashboard_editor"]:
                 edited_rows = st.session_state["dashboard_editor"]["edited_rows"]
                 if edited_rows:
@@ -678,13 +689,14 @@ with tab_dashboard:
                             update_payload = {
                                 "action": "update_status",
                                 "timestamp": str(row_data.get("Timestamp", row_data.iloc[0])),
-                                "cadet_name": str(row_data.get("Cadet Name", row_data.iloc[1])),
+                                "cap_id": str(row_data.get("CAP ID", row_data.get("CAPID", row_data.iloc[3]))),
                                 "new_status": new_val
                             }
                             try:
-                                requests.post(webhook_url, json=update_payload)
-                                st.toast(f"Updated status to {new_val}!", icon="✅")
-                                st.cache_data.clear()
+                                res = requests.post(webhook_url, json=update_payload)
+                                if res.status_code == 200:
+                                    st.toast(f"Updated status to {new_val}!", icon="✅")
+                                    st.cache_data.clear()
                             except Exception as e:
                                 st.error(f"Failed to update status: {e}")
         else:
