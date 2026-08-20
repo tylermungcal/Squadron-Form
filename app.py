@@ -65,18 +65,24 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# GOOGLE DRIVE & SHEETS INTEGRATION
+# GOOGLE DRIVE INTEGRATION (OAuth2)
 # ---------------------------------------------------------
 def get_drive_service():
     try:
-        creds_info = st.secrets["gcp_service_account"]
-        creds = Credentials.from_service_account_info(
-            creds_info, 
+        if "oauth" not in st.secrets:
+            return None
+        oauth_info = st.secrets["oauth"]
+        creds = Credentials(
+            token=None,
+            refresh_token=oauth_info["refresh_token"],
+            client_id=oauth_info["client_id"],
+            client_secret=oauth_info["client_secret"],
+            token_uri=oauth_info.get("token_uri", "https://oauth2.googleapis.com/token"),
             scopes=["https://www.googleapis.com/auth/drive.file"]
         )
         return build("drive", "v3", credentials=creds)
     except Exception as e:
-        st.error(f"Google Drive auth failed: {e}")
+        st.error(f"Authentication Error: {e}")
         return None
 
 def upload_file_to_drive(uploaded_file, folder_id):
@@ -123,13 +129,11 @@ backend_df = load_submitted_backend()
 # CALENDAR & SCHEDULE HELPERS
 # ---------------------------------------------------------
 def is_4th_wednesday(date_obj):
-    """Determines if a given date is the 4th Wednesday of its month."""
     if date_obj.weekday() != 2:
         return False
     return 22 <= date_obj.day <= 28
 
 def generate_wednesdays_through_dec(start_date):
-    """Generates structured schedule for all upcoming Wednesdays through Dec 2026."""
     wednesdays = []
     current = start_date
     
@@ -482,7 +486,6 @@ with tab_req:
 
                 eservices_proof_file = None
                 
-                # Prerequisite checks and override switch (ONLY for non-CPFT requests)
                 if req_type != "4th Wednesday CPFT":
                     manual_override = st.checkbox("I have completed my prerequisites, but the Cadet Progress report is displaying incorrect info.")
                     if manual_override:
@@ -505,17 +508,14 @@ with tab_req:
                 st.markdown("#### Select Target Wednesday Date")
                 target_date = st.date_input("Target Meeting Date:", value=datetime.now().date())
 
-                # 1. Day of Week Check
                 if target_date.weekday() != 2:
                     prereq_valid = False
                     error_msgs.append("Requests can only be submitted for **Wednesday meeting dates**.")
 
-                # 2. Enforce 4th Wednesday check specifically for CPFT requests
                 if req_type == "4th Wednesday CPFT" and not is_4th_wednesday(target_date):
                     prereq_valid = False
                     error_msgs.append("4th Wednesday CPFT requests can **only** be submitted for dates that are the **4th Wednesday** of the month.")
 
-                # 3. Submission Deadline Check (Thursday 23:59 of prior week)
                 deadline_dt = calculate_submission_deadline(target_date)
                 now = datetime.now()
                 st.caption(f"🕒 **Submission Deadline for {target_date.strftime('%d-%b-%Y')}:** {deadline_dt.strftime('%A, %b %d, %Y at 23:59')}")
@@ -524,7 +524,6 @@ with tab_req:
                     prereq_valid = False
                     error_msgs.append(f"The deadline for requesting **{target_date.strftime('%d-%b-%Y')}** passed on **{deadline_dt.strftime('%b %d at 23:59')}** (Thursday of the week prior).")
 
-                # 4. Special Event / Holiday Checks
                 is_halloween_date = (target_date.month == 10 and target_date.day == 28)
                 is_holiday_party = (target_date.month == 12 and target_date.day == 16)
                 is_xmas_break = (target_date.month == 12 and target_date.day in [23, 30])
@@ -538,17 +537,14 @@ with tab_req:
                     if "Achievement 4" in working_ach or any(f"Achievement {i}" in working_ach for i in range(5, 17)):
                         st.warning("⚠️ **Reminder:** PRB Requests for Achievement 4+ must take place on a **Blues Night**.")
 
-                # Display Validation Errors
                 if not prereq_valid:
                     for msg in error_msgs:
                         st.error(f"❌ **Validation Alert:** {msg}")
 
-                # 5. 4th Wednesday Uniform Disclaimer (ONLY renders when '4th Wednesday CPFT' is chosen)
                 if req_type == "4th Wednesday CPFT":
                     st.info("ℹ️ **4th Wednesday Note:** Arrive in PTs for testing at 1800, then change into Utility after testing.")
 
                 with st.form("cadet_request_form", clear_on_submit=True):
-                    # Check if document uploads should be rendered
                     no_upload_needed = req_type in ["Drill Test", "4th Wednesday CPFT"] or (
                         req_type == "Milestone Exam" and selected_exam_name not in ["Ira C. Eaker Award Exam", "General Carl A. Spaatz Award Exam"]
                     )
@@ -572,19 +568,42 @@ with tab_req:
                         else:
                             file_link = ""
                             proof_link = ""
-                            folder_id = "1aWN5BSWlMHYwBzrmijnlBEhP4ZEU9sJjx3VLIxqHnTE"
+                            folder_id = st.secrets.get("DRIVE_FOLDER_ID", "12Z89jcG91dlFk19bpU5acPhSdiL-kK2z")
                             
-                            with st.spinner("Uploading document(s) to Google Drive..."):
+                            with st.spinner("Processing request and uploading files..."):
                                 if uploaded_file is not None:
-                                    file_link = upload_file_to_drive(uploaded_file, folder_id)
+                                    file_link = upload_file_to_drive(uploaded_file, folder_id) or ""
                                 if eservices_proof_file is not None:
-                                    proof_link = upload_file_to_drive(eservices_proof_file, folder_id)
+                                    proof_link = upload_file_to_drive(eservices_proof_file, folder_id) or ""
 
-                            submission_summary = f"Request for **{req_type}**"
-                            if selected_exam_name:
-                                submission_summary += f" ({selected_exam_name})"
+                                apps_script_url = st.secrets.get("APPS_SCRIPT_URL", "")
                                 
-                            st.success(f"{submission_summary} successfully submitted for {selected_cadet} (CAP ID: {clean_cap_id}, {grade_input}, {flight_input} Flight)!")
+                                payload = {
+                                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                    "cadet_name": selected_cadet,
+                                    "cap_id": clean_cap_id,
+                                    "grade": grade_input,
+                                    "flight": flight_input,
+                                    "request_type": req_type,
+                                    "milestone_exam": selected_exam_name if req_type == "Milestone Exam" else "",
+                                    "target_date": target_date.strftime("%Y-%m-%d"),
+                                    "uploaded_file_url": file_link,
+                                    "proof_file_url": proof_link,
+                                    "comments": comments
+                                }
+
+                                if apps_script_url:
+                                    try:
+                                        res = requests.post(apps_script_url, json=payload, timeout=10)
+                                        if res.status_code == 200:
+                                            st.success(f"Request for **{req_type}** successfully submitted for {selected_cadet}!")
+                                        else:
+                                            st.warning("Form processed, but unable to write to backend Google Sheet. Please inform staff.")
+                                    except Exception as e:
+                                        st.warning("Form submitted locally, but backend webhook connection failed.")
+                                else:
+                                    st.success(f"Request for **{req_type}** submitted successfully!")
+
                             if file_link:
                                 st.markdown(f"📄 **Uploaded Document:** [View in Drive]({file_link})")
                             if proof_link:
