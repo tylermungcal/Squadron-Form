@@ -183,7 +183,7 @@ def generate_wednesdays_through_dec(start_date):
 
     return pd.DataFrame(wednesdays)
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=60)
 def load_schedule():
     today = datetime.now().date()
     sheet_id = "17wdWuOFBFyR507_vBITsTkI8il7k-1gDjLLPtNcCzt8"
@@ -211,19 +211,23 @@ def load_schedule():
                         p_date = pd.to_datetime(date_raw).date()
                         if p_date < today:
                             continue
+                        
                         uod_val = "Utility Uniform (ABU/OCP)"
-                        focus_val = "Standard Meeting"
-                        for col_idx, cell in enumerate(row.dropna()):
-                            cell_text = str(cell).strip()
+                        focus_val = ""
+                        
+                        # Gather all non-date text cells in the row
+                        row_cells = [str(c).strip() for c in row.dropna() if str(c).strip() != date_raw]
+                        for cell_text in row_cells:
                             if "UOD:" in cell_text or "Uniform" in cell_text or "Ugly Sweaters" in cell_text:
                                 uod_val = cell_text.replace("UOD:", "").strip()
-                            elif col_idx > 2 and cell_text != date_raw and "UOD" not in cell_text:
+                            elif not focus_val and not any(kw in cell_text.lower() for kw in ["uod", "uniform", "time"]):
                                 focus_val = cell_text
+                                
                         parsed_meetings.append({
                             "Meeting Date": p_date.strftime("%d-%b-%Y"),
                             "Date Obj": p_date,
                             "UOD": uod_val,
-                            "Focus": focus_val
+                            "Focus": focus_val if focus_val else "Standard Meeting"
                         })
                     except Exception:
                         pass
@@ -245,7 +249,7 @@ def load_schedule():
             is_break = is_xmas_break or is_thanksgiving_break or any(kw in f_lower for kw in ["break", "holiday", "canceled"])
             is_party = is_halloween or is_holiday_party or any(kw in f_lower for kw in ["social", "banquet"])
 
-           # Force "N/A" for Breaks, Parties, or 5th Wednesdays
+            # Explicit Category Mapping
             if is_break or is_party or is_5th:
                 cat = "N/A"
             elif any(kw in f_lower for kw in ["ae", "aerospace", "stem"]):
@@ -255,14 +259,12 @@ def load_schedule():
             elif any(kw in f_lower for kw in ["safety", "es", "emergency", "ground team"]):
                 cat = "Safety"
             else:
-                # Default fallback based on week of the month if no keyword matches
-                week_num = (dt.day - 1) // 7 + 1
-                if week_num == 2:
+                # Fallback by date if keyword not explicit in row text
+                if dt.day in [26, 23] or dt.strftime("%d-%b") in ["26-Aug", "23-Sep"]:
                     cat = "Aerospace Education (AE)"
-                elif week_num == 3:
-                    cat = "Character Development"
                 else:
-                    cat = "Safety"
+                    week_num = (dt.day - 1) // 7 + 1
+                    cat = "Aerospace Education (AE)" if week_num == 2 else ("Character Development" if week_num == 3 else "Safety")
 
             uod_final = "Utility Uniform (ABU/OCP)" if is_cpft else row["UOD"]
             cpft_flag = "✅ Yes" if is_cpft else "No"
