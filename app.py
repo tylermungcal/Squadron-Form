@@ -249,22 +249,18 @@ def load_schedule():
             is_break = is_xmas_break or is_thanksgiving_break or any(kw in f_lower for kw in ["break", "holiday", "canceled"])
             is_party = is_halloween or is_holiday_party or any(kw in f_lower for kw in ["social", "banquet"])
 
-            # Explicit Category Mapping
+           # Explicit Category Mapping (AE / Character / Safety take priority over CPFT)
             if is_break or is_party or is_5th:
                 cat = "N/A"
-            elif any(kw in f_lower for kw in ["ae", "aerospace", "stem"]):
+            elif any(kw in f_lower for kw in ["ae", "aerospace", "stem"]) or dt.day in [26, 23]:
                 cat = "Aerospace Education (AE)"
             elif any(kw in f_lower for kw in ["character", "moral", "cd"]):
                 cat = "Character Development"
             elif any(kw in f_lower for kw in ["safety", "es", "emergency", "ground team"]):
                 cat = "Safety"
             else:
-                # Fallback by date if keyword not explicit in row text
-                if dt.day in [26, 23] or dt.strftime("%d-%b") in ["26-Aug", "23-Sep"]:
-                    cat = "Aerospace Education (AE)"
-                else:
-                    week_num = (dt.day - 1) // 7 + 1
-                    cat = "Aerospace Education (AE)" if week_num == 2 else ("Character Development" if week_num == 3 else "Safety")
+                week_num = (dt.day - 1) // 7 + 1
+                cat = "Aerospace Education (AE)" if week_num == 2 else ("Character Development" if week_num == 3 else "Safety")
 
             uod_final = "Utility Uniform (ABU/OCP)" if is_cpft else row["UOD"]
             cpft_flag = "✅ Yes" if is_cpft else "No"
