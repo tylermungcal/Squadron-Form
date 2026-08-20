@@ -384,16 +384,64 @@ with tab_dashboard:
 # ---------------------------------------------------------
 with tab_progress:
     st.markdown("### 📊 Cadet Progress Lookup")
-    st.caption("Live data from [SQ 153 Cadet Progress Sheet](https://docs.google.com/spreadsheets/d/1dUUf4xSWFX8KJoJPhqXd2glYmVGjVIZplvrToVd_Uyg/edit)")
+    st.caption("Live data from [SQ 153 Cadet Progress Sheet](https://docs.google.com/spreadsheets/d/1dUUf4xSWFX8KJoJPhqXd2glYmVGjVIZplvrToVd_Uyg/edit#gid=1661632143)")
     
     if not progress_df.empty:
-        search_query = st.text_input("🔍 Search Cadet Name:")
-        filtered_progress = progress_df.copy()
+        # Search Box Input
+        search_query = st.text_input(
+            "🔍 Search by Cadet Name or CAP ID:", 
+            placeholder="Type a name (e.g., 'Smith') or CAP ID (e.g., '123456')..."
+        ).strip()
+
         if search_query:
-            filtered_progress = filtered_progress[filtered_progress["Cadet Name"].str.contains(search_query, case=False, na=False)]
-        st.dataframe(filtered_progress, use_container_width=True, hide_index=True)
+            # Filter logic for both Name and CAP ID
+            query_str = str(search_query).lower()
+            
+            # Helper column matching
+            name_match = progress_df["Cadet Name"].astype(str).str.lower().str.contains(query_str, na=False)
+            
+            capid_col = "CAP ID" if "CAP ID" in progress_df.columns else progress_df.columns[0]
+            capid_match = progress_df[capid_col].astype(str).str.contains(query_str, na=False)
+
+            filtered_df = progress_df[name_match | capid_match].copy()
+
+            if not filtered_df.empty:
+                # Helper function to format PT status and check expiry
+                def format_pt_status(row):
+                    pt_val = str(row.get("Fitness", "")).strip()
+                    pt_exp = str(row.get("PT Expiry", "")).strip()
+                    
+                    if pt_exp and pt_exp.lower() not in ["none", "nan", ""]:
+                        try:
+                            exp_date = pd.to_datetime(pt_exp).date()
+                            if exp_date < datetime.now().date():
+                                return f"❌ Expired ({pt_exp})"
+                            return f"✅ Valid (Expires {pt_exp})"
+                        except Exception:
+                            pass
+                    return pt_val if pt_val and pt_val.lower() != "nan" else "N/A"
+
+                # Standardize column mapping to display only concise fields
+                summary_df = pd.DataFrame()
+                summary_df["CAP ID"] = filtered_df[capid_col].astype(str).str.replace(".0", "", regex=False)
+                summary_df["Cadet Name"] = filtered_df.get("Cadet Name", "N/A")
+                summary_df["Flight"] = filtered_df.get("Assigned Flight", filtered_df.get("Flight", "N/A"))
+                summary_df["Working Towards"] = filtered_df.get("Working Towards Achievement No.", "N/A")
+                summary_df["Leadership Completed"] = filtered_df.get("Leadership", "N/A")
+                summary_df["Drill Test Completed"] = filtered_df.get("Drill Test", "N/A")
+                summary_df["AE Completed"] = filtered_df.get("Aerospace (AE) No. Completed", "N/A")
+                summary_df["PT Status"] = filtered_df.apply(format_pt_status, axis=1)
+                summary_df["Promotion Eligible"] = filtered_df.get("Promotion Eligible Date", "N/A")
+                summary_df["Needs for Promotion"] = filtered_df.get("Notes: Needed for Promotion", "N/A")
+
+                st.markdown(f"**Found {len(summary_df)} matching record(s):**")
+                st.dataframe(summary_df, use_container_width=True, hide_index=True)
+            else:
+                st.warning(f"No cadet records found matching **'{search_query}'**.")
+        else:
+            st.info("💡 **Enter a Cadet Name or CAP ID above to display progress data.**")
     else:
-        st.info("No progress report data available.")
+        st.error("Unable to load cadet progress data. Please check connection to Google Sheets.")
 
 # ---------------------------------------------------------
 # TAB 4: WEDNESDAY SCHEDULE & UOD
