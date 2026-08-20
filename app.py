@@ -252,7 +252,10 @@ def load_schedule():
            # Explicit Category Mapping
             date_str = dt.strftime("%d-%b-%Y")
             
-            # Explicitly force AE for Aug 26 & Sep 23
+            # Explicit Category Mapping
+            date_str = dt.strftime("%d-%b-%Y")
+            
+            # Explicitly force AE for 26-Aug-2026 and 23-Sep-2026
             if date_str in ["26-Aug-2026", "23-Sep-2026"]:
                 cat = "Aerospace Education (AE)"
             elif is_break or is_party or is_5th:
