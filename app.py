@@ -620,11 +620,73 @@ with tab_dashboard:
 
         st.markdown("---")
         
-        # Freshly read backend entries
+        # Load backend requests
         fresh_backend_df = load_submitted_backend()
         
         if not fresh_backend_df.empty:
-            st.dataframe(fresh_backend_df, use_container_width=True, hide_index=True)
+            df_edit = fresh_backend_df.copy()
+            
+            # 1. Clean Target Date column (removes 'T00:00:00.000Z')
+            target_cols = [c for c in df_edit.columns if "target" in c.lower() or "date" in c.lower()]
+            for tc in target_cols:
+                df_edit[tc] = df_edit[tc].astype(str).apply(lambda x: str(x).split("T")[0] if "T" in str(x) else str(x))
+
+            # 2. Add Status column if missing from backend dataframe
+            status_col_name = "Status"
+            if status_col_name not in df_edit.columns:
+                df_edit[status_col_name] = "Pending"
+
+            # 3. Configure columns for st.data_editor
+            column_config = {
+                status_col_name: st.column_config.SelectboxColumn(
+                    "Status",
+                    help="Update request status",
+                    options=["Pending", "Approved", "Denied", "In Progress", "Submitted"],
+                    required=True,
+                )
+            }
+
+            # Hyperlink URL columns as 'View Document'
+            for col in df_edit.columns:
+                if "url" in col.lower() or "file" in col.lower() or "proof" in col.lower():
+                    column_config[col] = st.column_config.LinkColumn(
+                        col,
+                        display_text="View Document"
+                    )
+
+            st.caption("💡 **Staff Tip:** You can update any request status directly in the table below.")
+            
+            # Interactive Editable Dataframe
+            edited_df = st.data_editor(
+                df_edit,
+                column_config=column_config,
+                use_container_width=True,
+                hide_index=True,
+                key="dashboard_editor"
+            )
+
+            # Detect status changes and push back to Google Sheet
+            if "dashboard_editor" in st.session_state and "edited_rows" in st.session_state["dashboard_editor"]:
+                edited_rows = st.session_state["dashboard_editor"]["edited_rows"]
+                if edited_rows:
+                    webhook_url = "https://script.google.com/macros/s/AKfycby_iDEd9a3hmJQyLhKuP9833KirbBK19Mki2K43eNOSs6iVLYDZq2FEw66V06Bb65uP6g/exec"
+                    for row_idx, changes in edited_rows.items():
+                        if status_col_name in changes:
+                            new_val = changes[status_col_name]
+                            row_data = df_edit.iloc[row_idx]
+                            
+                            update_payload = {
+                                "action": "update_status",
+                                "timestamp": str(row_data.get("Timestamp", row_data.iloc[0])),
+                                "cadet_name": str(row_data.get("Cadet Name", row_data.iloc[1])),
+                                "new_status": new_val
+                            }
+                            try:
+                                requests.post(webhook_url, json=update_payload)
+                                st.toast(f"Updated status to {new_val}!", icon="✅")
+                                st.cache_data.clear()
+                            except Exception as e:
+                                st.error(f"Failed to update status: {e}")
         else:
             st.info("No requests currently recorded or unable to load backend sheet.")
 
