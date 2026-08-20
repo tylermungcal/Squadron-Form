@@ -574,7 +574,7 @@ with tab_req:
                                     "flight": flight_input,
                                     "request_type": req_type,
                                     "milestone_exam": selected_exam_name if req_type == "Milestone Exam" else "",
-                                    "target_date": target_date.strftime("%Y-%m-%d"),
+                                    "meeting_date": target_date.strftime("%Y-%m-%d"),
                                     "uploaded_file_url": file_link,
                                     "proof_file_url": proof_link,
                                     "comments": comments
@@ -626,21 +626,13 @@ with tab_dashboard:
         if not fresh_backend_df.empty:
             df_edit = fresh_backend_df.copy()
             
-            # Clean Timestamps and Target Dates (removes ISO 'T' & 'Z' formatting)
+            # Clean Timestamps and Dates (removes ISO 'T' & 'Z' formatting)
             for col in df_edit.columns:
                 col_lower = col.lower()
                 if "time" in col_lower or "date" in col_lower or "target" in col_lower:
                     df_edit[col] = df_edit[col].astype(str).apply(
                         lambda x: str(x).replace("T", " ").split(".")[0].replace("Z", "") if "T" in str(x) else str(x)
                     )
-
-            # Rename 'Target Date' or similar column to 'Meeting Date'
-            rename_dict = {}
-            for col in df_edit.columns:
-                if "target" in col.lower() or "date" in col.lower() and "time" not in col.lower():
-                    rename_dict[col] = "Meeting Date"
-            if rename_dict:
-                df_edit.rename(columns=rename_dict, inplace=True)
 
             # Ensure Status column exists
             status_col_name = "Status"
