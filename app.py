@@ -148,9 +148,9 @@ def generate_wednesdays_through_dec(start_date):
 
         if is_halloween:
             uod = "Utility Uniform (ABU/OCP)"
-            notes = "🎃 Halloween Party — Utility Uniform (CPFT tester cadets test in PTs then change into Utility)"
-            cat = "Fitness / Activity"
-            cpft_str = "✅ Yes (Optional)"
+            notes = "🎃 Halloween Party — No Requests Permitted"
+            cat = "Social / Event"
+            cpft_str = "No"
         elif is_holiday:
             uod = "Civilian / N/A"
             notes = "🚫 No Meeting — Holiday Break"
@@ -162,8 +162,8 @@ def generate_wednesdays_through_dec(start_date):
             cat = "Leadership / General"
             cpft_str = "No"
         elif is_cpft:
-            uod = "PT Uniform"
-            notes = "CPFT Testing Night"
+            uod = "Utility Uniform (ABU/OCP)"
+            notes = "CPFT Testing Night (Arrive in PTs, change to Utility)"
             cat = "Fitness / CPFT"
             cpft_str = "✅ Yes"
         else:
@@ -224,7 +224,7 @@ def load_schedule():
                         if p_date < today:
                             continue
                         
-                        uod_val = "Utility Uniform"
+                        uod_val = "Utility Uniform (ABU/OCP)"
                         focus_val = "Standard Meeting"
                         for col_idx, cell in enumerate(row.dropna()):
                             cell_text = str(cell).strip()
@@ -250,16 +250,16 @@ def load_schedule():
         for idx, row in df.iterrows():
             dt = row["Date Obj"]
             f_lower = str(row["Focus"]).lower()
-            u_lower = str(row["UOD"]).lower()
             
-            is_cpft = is_4th_wednesday(dt) or "cpft" in f_lower or "pt" in u_lower
+            is_cpft = is_4th_wednesday(dt) or "cpft" in f_lower
             is_halloween = (dt.month == 10 and dt.day == 28) or "halloween" in f_lower
-            
-            if is_halloween:
-                cat = "Fitness / Activity"
+            is_party = is_halloween or any(kw in f_lower for kw in ["party", "social", "banquet"])
+
+            if is_party:
+                cat = "Social / Event"
                 uod_final = "Utility Uniform (ABU/OCP)"
-                notes = "🎃 Halloween Party — Utility Uniform (CPFT tester cadets test in PTs then change into Utility)"
-                cpft_flag = "✅ Yes (Optional)"
+                notes = f"🎃 {row['Focus']} — No Requests Permitted" if is_halloween else f"⚠️ No Requests — Social ({row['Focus']})"
+                cpft_flag = "No"
             else:
                 if any(kw in f_lower for kw in ["es", "emergency", "ground team"]):
                     cat = "Emergency Services (ES)"
@@ -273,20 +273,17 @@ def load_schedule():
                     cat = "Leadership / General"
 
                 is_5th = dt.day >= 29
-                is_party = any(kw in f_lower for kw in ["party", "social", "banquet"])
                 is_break = any(kw in f_lower for kw in ["break", "holiday", "canceled"])
 
-                uod_final = row["UOD"]
+                uod_final = "Utility Uniform (ABU/OCP)" if is_cpft else row["UOD"]
                 cpft_flag = "✅ Yes" if is_cpft else "No"
 
                 if is_5th:
                     notes = "⚠️ No Requests — 5th Wednesday Event"
-                elif is_party:
-                    notes = f"⚠️ No Requests — Social ({row['Focus']})"
                 elif is_break:
                     notes = f"🚫 No Meeting — {row['Focus']}"
                 else:
-                    notes = "CPFT Testing Night" if is_cpft else "Standard Requests Allowed"
+                    notes = "CPFT Testing Night (Arrive in PTs, change to Utility)" if is_cpft else "Standard Requests Allowed"
 
             condensed.append({
                 "Meeting Date": row["Meeting Date"],
@@ -470,6 +467,13 @@ with tab_req:
             st.markdown("#### Select Target Wednesday Date")
             target_date = st.date_input("Target Meeting Date:", value=datetime.now().date())
 
+            # Party / Social Event Blocking Check
+            is_halloween_date = (target_date.month == 10 and target_date.day == 28)
+            is_5th_wed = (target_date.weekday() == 2 and target_date.day >= 29)
+            if is_halloween_date or is_5th_wed:
+                prereq_valid = False
+                error_msgs.append("No requests are permitted on **Party or Special Event dates** (e.g., Halloween Party / 5th Wednesday).")
+
             if req_type == "PRB":
                 if "Achievement 4" in working_ach or any(f"Achievement {i}" in working_ach for i in range(5, 17)):
                     st.warning("⚠️ **Reminder:** PRB Requests for Achievement 4+ must take place on a **Blues Night**.")
@@ -478,6 +482,8 @@ with tab_req:
                 if target_date.weekday() != 2:
                     prereq_valid = False
                     error_msgs.append("CPFT Testing must take place on a **Wednesday**.")
+                else:
+                    st.info("ℹ️ **Uniform Note:** Standard UOD is **Utility Uniform (ABU/OCP)**. Please arrive in **PTs** for testing, then change into your **Utility Uniform** after testing.")
 
             if not prereq_valid:
                 for msg in error_msgs:
@@ -498,7 +504,7 @@ with tab_req:
                 submit_button = st.form_submit_button("Submit Request")
                 if submit_button:
                     if not prereq_valid:
-                        st.error("Please resolve the prerequisite and CAP ID errors listed above before submitting.")
+                        st.error("Please resolve the prerequisite and date validation errors listed above before submitting.")
                     else:
                         file_link = ""
                         if uploaded_file is not None:
