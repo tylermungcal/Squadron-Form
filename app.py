@@ -211,17 +211,29 @@ def load_schedule():
                         if p_date < today:
                             continue
                         
-                        uod_val = "Utility Uniform (ABU/OCP)"
+                        uod_val = ""
                         focus_val = ""
-                        
-                        # Gather all non-date text cells in the row
                         row_cells = [str(c).strip() for c in row.dropna() if str(c).strip() != date_raw]
+                        
+                        # Inspect all row cells for exact uniform indicators
                         for cell_text in row_cells:
-                            if "UOD:" in cell_text or "Uniform" in cell_text or "Ugly Sweaters" in cell_text:
+                            c_lower = cell_text.lower()
+                            if "uod:" in c_lower or "uniform" in c_lower or "ugly sweater" in c_lower:
                                 uod_val = cell_text.replace("UOD:", "").strip()
-                            elif not focus_val and not any(kw in cell_text.lower() for kw in ["uod", "uniform", "time"]):
+                            elif any(kw in c_lower for kw in ["blues", "class b", "class a", "civilian", "ptu", "pt uniform"]):
+                                uod_val = cell_text.strip()
+                            elif not focus_val and not any(kw in c_lower for kw in ["time", "meeting", "location"]):
                                 focus_val = cell_text
-                                
+
+                        # Fallback UOD detection based on week/text if sheet cell was empty
+                        if not uod_val:
+                            if "blues" in row_str.lower() or "class b" in row_str.lower():
+                                uod_val = "Blues (Class B)"
+                            elif "civilian" in row_str.lower():
+                                uod_val = "Civilian / Activity"
+                            else:
+                                uod_val = "Utility Uniform (ABU/OCP)"
+
                         parsed_meetings.append({
                             "Meeting Date": p_date.strftime("%d-%b-%Y"),
                             "Date Obj": p_date,
@@ -248,7 +260,6 @@ def load_schedule():
             is_break = is_xmas_break or is_thanksgiving_break or any(kw in f_lower for kw in ["break", "holiday", "canceled"])
             is_party = is_halloween or is_holiday_party or any(kw in f_lower for kw in ["social", "banquet"])
 
-            # Dynamically pull UOD from Google Sheet
             uod_final = row["UOD"]
             cpft_flag = "✅ Yes" if is_cpft else "No"
 
