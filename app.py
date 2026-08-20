@@ -131,9 +131,12 @@ def generate_wednesdays_through_dec(start_date):
         is_thanksgiving_break = (current.month == 11 and current.day >= 24)
         is_halloween = (current.month == 10 and current.day == 28)
 
-        # Restricted strictly to Safety, Aerospace Education (AE), or Character Development
         week_num = (current.day - 1) // 7 + 1
-        if week_num == 1:
+        
+        # Determine Training Focus
+        if is_xmas_break or is_thanksgiving_break or is_holiday_party or is_halloween or is_5th:
+            cat = "N/A"
+        elif week_num == 1:
             cat = "Safety"
         elif week_num == 2:
             cat = "Aerospace Education (AE)"
@@ -237,24 +240,27 @@ def load_schedule():
             is_halloween = (dt.month == 10 and dt.day == 28) or "halloween" in f_lower
             is_holiday_party = (dt.month == 12 and dt.day == 16) or "party" in f_lower
             is_xmas_break = (dt.month == 12 and dt.day in [23, 30])
+            is_thanksgiving_break = (dt.month == 11 and dt.day >= 24)
+            is_5th = dt.day >= 29
+            is_break = is_xmas_break or is_thanksgiving_break or any(kw in f_lower for kw in ["break", "holiday", "canceled"])
             is_party = is_halloween or is_holiday_party or any(kw in f_lower for kw in ["social", "banquet"])
 
-            # Map dynamically from Google Sheet to Safety, AE, or Character Development
-            if any(kw in f_lower for kw in ["safety", "es", "emergency", "ground team", "fitness", "cpft", "general", "leadership"]):
-                cat = "Safety"
+            # Force "N/A" for Breaks, Parties, or 5th Wednesdays
+            if is_break or is_party or is_5th:
+                cat = "N/A"
             elif any(kw in f_lower for kw in ["ae", "aerospace", "stem"]):
                 cat = "Aerospace Education (AE)"
             elif any(kw in f_lower for kw in ["character", "moral", "cd"]):
                 cat = "Character Development"
+            elif any(kw in f_lower for kw in ["safety", "es", "emergency", "ground team", "fitness", "cpft"]):
+                cat = "Safety"
             else:
                 cat = "Safety"
 
             uod_final = "Utility Uniform (ABU/OCP)" if is_cpft else row["UOD"]
             cpft_flag = "✅ Yes" if is_cpft else "No"
-            is_5th = dt.day >= 29
-            is_break = any(kw in f_lower for kw in ["break", "holiday", "canceled"])
 
-            if is_xmas_break:
+            if is_xmas_break or is_thanksgiving_break:
                 uod_final = "Civilian / N/A"
                 notes = "🚫 No Meeting — Holiday Break"
             elif is_holiday_party:
