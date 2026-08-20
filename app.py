@@ -626,12 +626,12 @@ with tab_dashboard:
         if not fresh_backend_df.empty:
             df_edit = fresh_backend_df.copy()
             
-            # Explicitly rename Target Date if Google Sheet header hasn't updated yet
+            # 1. Rename Target Date to Meeting Date
             rename_dict = {col: "Meeting Date" for col in df_edit.columns if "target" in col.lower()}
             if rename_dict:
                 df_edit.rename(columns=rename_dict, inplace=True)
 
-            # Clean Timestamps and Dates (strips out time / ISO junk)
+            # 2. Format Dates & Timestamps cleanly
             for col in df_edit.columns:
                 col_lower = col.lower()
                 if "meeting date" in col_lower or "date" in col_lower:
@@ -643,12 +643,12 @@ with tab_dashboard:
                         lambda x: str(x).replace("T", " ").split(".")[0].replace("Z", "") if "T" in str(x) else str(x)
                     )
 
-            # Ensure Status column exists
+            # 3. Ensure Status column exists
             status_col_name = "Status"
             if status_col_name not in df_edit.columns:
                 df_edit[status_col_name] = "Pending"
 
-            # Configure st.data_editor column types & displays
+            # 4. Configure Editor Columns
             column_config = {
                 status_col_name: st.column_config.SelectboxColumn(
                     "Status",
@@ -658,7 +658,6 @@ with tab_dashboard:
                 )
             }
 
-            # Hyperlink all URL/File columns as 'View Document'
             for col in df_edit.columns:
                 if any(kw in col.lower() for kw in ["url", "file", "proof", "link", "upload"]):
                     column_config[col] = st.column_config.LinkColumn(
@@ -668,7 +667,6 @@ with tab_dashboard:
 
             st.caption("💡 **Staff Tip:** You can update any request status directly in the table below.")
             
-            # Interactive Data Editor Table
             edited_df = st.data_editor(
                 df_edit,
                 column_config=column_config,
@@ -677,7 +675,7 @@ with tab_dashboard:
                 key="dashboard_editor"
             )
 
-            # Detect status updates and push back to Google Sheet
+            # 5. Send Status Updates to Apps Script
             if "dashboard_editor" in st.session_state and "edited_rows" in st.session_state["dashboard_editor"]:
                 edited_rows = st.session_state["dashboard_editor"]["edited_rows"]
                 if edited_rows:
@@ -689,8 +687,9 @@ with tab_dashboard:
                             
                             update_payload = {
                                 "action": "update_status",
-                                "timestamp": str(row_data.get("Timestamp", row_data.iloc[0])),
-                                "cap_id": str(row_data.get("CAP ID", row_data.get("CAPID", row_data.iloc[3]))),
+                                "timestamp": str(row_data.iloc[0]),
+                                "cadet_name": str(row_data.iloc[1]),
+                                "cap_id": str(row_data.iloc[3]),
                                 "new_status": new_val
                             }
                             try:
