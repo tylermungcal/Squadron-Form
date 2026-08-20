@@ -143,24 +143,25 @@ def generate_wednesdays_through_dec(start_date):
     while current <= end_date:
         is_cpft = is_4th_wednesday(current)
         is_5th = current.day >= 29
-        is_xmas = (current.month == 12 and current.day in [23, 24, 25])
-        is_holiday = (current.month == 11 and current.day >= 24) or (current.month == 12 and current.day >= 26)
+        is_xmas_break = (current.month == 12 and current.day in [23, 30])
+        is_holiday_party = (current.month == 12 and current.day == 16)
+        is_thanksgiving_break = (current.month == 11 and current.day >= 24)
         is_halloween = (current.month == 10 and current.day == 28)
 
-        if is_xmas:
-            uod = "Ugly Sweaters / Civilian"
-            notes = "🚫 No Meeting — Xmas Break"
+        if is_xmas_break or is_thanksgiving_break:
+            uod = "Civilian / N/A"
+            notes = "🚫 No Meeting — Holiday Break"
             cat = "Holiday Break"
+            cpft_str = "No"
+        elif is_holiday_party:
+            uod = "Ugly Sweaters / Civilian"
+            notes = "🎄 Holiday Party — No Requests Permitted"
+            cat = "Social / Event"
             cpft_str = "No"
         elif is_halloween:
             uod = "Utility Uniform (ABU/OCP)"
             notes = "🎃 Halloween Party — No Requests Permitted"
             cat = "Social / Event"
-            cpft_str = "No"
-        elif is_holiday:
-            uod = "Civilian / N/A"
-            notes = "🚫 No Meeting — Holiday Break"
-            cat = "N/A"
             cpft_str = "No"
         elif is_5th:
             uod = "Civilian / Activity"
@@ -258,13 +259,19 @@ def load_schedule():
             
             is_cpft = is_4th_wednesday(dt) or "cpft" in f_lower
             is_halloween = (dt.month == 10 and dt.day == 28) or "halloween" in f_lower
-            is_xmas = (dt.month == 12 and dt.day == 23) or "xmas" in f_lower or "christmas" in f_lower
-            is_party = is_halloween or any(kw in f_lower for kw in ["party", "social", "banquet"])
+            is_holiday_party = (dt.month == 12 and dt.day == 16) or "party" in f_lower
+            is_xmas_break = (dt.month == 12 and dt.day in [23, 30])
+            is_party = is_halloween or is_holiday_party or any(kw in f_lower for kw in ["social", "banquet"])
 
-            if is_xmas:
+            if is_xmas_break:
                 cat = "Holiday Break"
+                uod_final = "Civilian / N/A"
+                notes = "🚫 No Meeting — Holiday Break"
+                cpft_flag = "No"
+            elif is_holiday_party:
+                cat = "Social / Event"
                 uod_final = "Ugly Sweaters / Civilian"
-                notes = "🚫 No Meeting — Xmas Break"
+                notes = "🎄 Holiday Party — No Requests Permitted"
                 cpft_flag = "No"
             elif is_party:
                 cat = "Social / Event"
@@ -473,15 +480,26 @@ with tab_req:
                 prereq_valid = False
                 error_msgs.append("CAP ID must be exactly **6 digits**.")
 
-            if req_type == "Drill Test":
-                if not lead_val or lead_val in ["None", "nan"] or ae_val in ["0", "None", "nan", ""]:
-                    prereq_valid = False
-                    error_msgs.append("To request a **Drill Test**, you must have completed **Learn to Lead** and **AE Dimensions**.")
+            # Prerequisite Check & Override Switch
+            manual_override = st.checkbox("I have completed my prerequisites, but the Cadet Progress report is displaying incorrect info.")
             
-            elif req_type in ["Technical Writing Submission (SDA)", "Essay Submission"]:
-                if not lead_val or lead_val in ["None", "nan"] or ae_val in ["0", "None", "nan", ""]:
+            eservices_proof_file = None
+            if manual_override:
+                st.warning("⚠️ **eServices Verification Required:** Please upload a screenshot of your **Cadet Promotions Track Report** from eServices showing completed prerequisites.")
+                eservices_proof_file = st.file_uploader("Upload eServices Promotions Track Screenshot:*", type=["png", "jpg", "jpeg", "pdf"], key="eservices_proof")
+                if eservices_proof_file is None:
                     prereq_valid = False
-                    error_msgs.append("To request an **SDA / Essay Submission**, **Learn to Lead** and **AE Dimensions** must be completed.")
+                    error_msgs.append("You must upload an eServices screenshot to verify completed prerequisites.")
+            else:
+                if req_type == "Drill Test":
+                    if not lead_val or lead_val in ["None", "nan"] or ae_val in ["0", "None", "nan", ""]:
+                        prereq_valid = False
+                        error_msgs.append("To request a **Drill Test**, you must have completed **Learn to Lead** and **AE Dimensions**.")
+                
+                elif req_type in ["Technical Writing Submission (SDA)", "Essay Submission"]:
+                    if not lead_val or lead_val in ["None", "nan"] or ae_val in ["0", "None", "nan", ""]:
+                        prereq_valid = False
+                        error_msgs.append("To request an **SDA / Essay Submission**, **Learn to Lead** and **AE Dimensions** must be completed.")
 
             st.markdown("#### Select Target Wednesday Date")
             target_date = st.date_input("Target Meeting Date:", value=datetime.now().date())
@@ -502,12 +520,13 @@ with tab_req:
 
             # 3. Special Event / Holiday Checks
             is_halloween_date = (target_date.month == 10 and target_date.day == 28)
-            is_xmas_date = (target_date.month == 12 and target_date.day == 23)
+            is_holiday_party = (target_date.month == 12 and target_date.day == 16)
+            is_xmas_break = (target_date.month == 12 and target_date.day in [23, 30])
             is_5th_wed = (target_date.weekday() == 2 and target_date.day >= 29)
             
-            if is_halloween_date or is_5th_wed or is_xmas_date:
+            if is_halloween_date or is_holiday_party or is_xmas_break or is_5th_wed:
                 prereq_valid = False
-                error_msgs.append("No requests are permitted on **Party or Holiday Break dates** (e.g., Halloween Party / Xmas Break / 5th Wednesday).")
+                error_msgs.append("No requests are permitted on **Party or Holiday Break dates** (e.g., Halloween Party / Holiday Party / Xmas Break / 5th Wednesday).")
 
             # 4. 4th Wednesday Validation
             is_4th_wed = is_4th_wednesday(target_date)
@@ -547,10 +566,14 @@ with tab_req:
                         st.error("Please resolve the prerequisite and date validation errors listed above before submitting.")
                     else:
                         file_link = ""
-                        if uploaded_file is not None:
-                            folder_id = "1aWN5BSWlMHYwBzrmijnlBEhP4ZEU9sJjx3VLIxqHnTE"
-                            with st.spinner("Uploading document to Google Drive..."):
+                        proof_link = ""
+                        folder_id = "1aWN5BSWlMHYwBzrmijnlBEhP4ZEU9sJjx3VLIxqHnTE"
+                        
+                        with st.spinner("Uploading document(s) to Google Drive..."):
+                            if uploaded_file is not None:
                                 file_link = upload_file_to_drive(uploaded_file, folder_id)
+                            if eservices_proof_file is not None:
+                                proof_link = upload_file_to_drive(eservices_proof_file, folder_id)
 
                         submission_summary = f"Request for **{req_type}**"
                         if selected_exam_name:
@@ -559,6 +582,8 @@ with tab_req:
                         st.success(f"{submission_summary} successfully submitted for {selected_cadet} (CAP ID: {clean_cap_id}, {grade_input}, {flight_input} Flight)!")
                         if file_link:
                             st.markdown(f"📄 **Uploaded Document:** [View in Drive]({file_link})")
+                        if proof_link:
+                            st.markdown(f"📸 **eServices Prerequisite Proof:** [View Screenshot in Drive]({proof_link})")
     else:
         st.warning("Unable to fetch Cadet Progress data.")
 
