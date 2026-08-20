@@ -648,22 +648,31 @@ with tab_dashboard:
             if status_col_name not in df_edit.columns:
                 df_edit[status_col_name] = "Pending"
 
-            # 4. Configure Editor Columns
+            # 4. Configure Editor Columns & Edit Permissions
             column_config = {
                 status_col_name: st.column_config.SelectboxColumn(
                     "Status",
                     help="Update request status",
                     options=["Pending", "Approved", "Denied", "In Progress", "Submitted"],
                     required=True,
+                    disabled=False  # Keeps Status column editable
                 )
             }
 
+            # Disable all other columns while keeping hyperlinked documents intact
             for col in df_edit.columns:
-                if any(kw in col.lower() for kw in ["url", "file", "proof", "link", "upload"]):
-                    column_config[col] = st.column_config.LinkColumn(
-                        col,
-                        display_text="View Document"
-                    )
+                if col != status_col_name:
+                    if any(kw in col.lower() for kw in ["url", "file", "proof", "link", "upload"]):
+                        column_config[col] = st.column_config.LinkColumn(
+                            col,
+                            display_text="View Document",
+                            disabled=True
+                        )
+                    else:
+                        column_config[col] = st.column_config.Column(
+                            col,
+                            disabled=True
+                        )
 
             st.caption("💡 **Staff Tip:** You can update any request status directly in the table below.")
             
