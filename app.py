@@ -138,13 +138,12 @@ schedule_df = load_schedule()
 backend_df = load_submitted_backend()
 
 # ---------------------------------------------------------
-# HELPER FUNCTIONS FOR GRADE & MILESTONE MAPPING
+# HELPER FUNCTIONS FOR GRADE, MILESTONE, & CAPF 60-90 MAPPING
 # ---------------------------------------------------------
 def infer_current_grade(target_ach_str):
     """Determines current rank based on target achievement."""
     s = str(target_ach_str).lower().strip()
     
-    # Check for specific numbers or awards
     if "achievement 1" in s: return "C/Amn"
     if "achievement 2" in s or "curry" in s: return "C/A1C"
     if "achievement 3" in s or "wright" in s: return "C/SrA"
@@ -162,8 +161,46 @@ def infer_current_grade(target_ach_str):
     
     return "Cadet"
 
+def get_capf60_90_info(grade_str):
+    """Returns Phase description, form name, and URL based on grade."""
+    g = grade_str.upper().strip()
+    
+    # Phase I: C/AB to C/SrA
+    if g in ["C/AB", "C/AMN", "C/A1C", "C/SRA", "CADET"]:
+        return {
+            "phase": "Phase I (The Learning Phase)",
+            "form_name": "CAPF 60-91 (Cadet Leadership Feedback - Phase I)",
+            "url": "https://www.gocivilairpatrol.com/media/cms/CAPF_6091_25B1D25BA2960.pdf"
+        }
+    # Phase II: C/SSgt to C/CMSgt
+    elif g in ["C/SSGT", "C/TSGT", "C/MSGT", "C/SMSGT", "C/CMSGT"]:
+        return {
+            "phase": "Phase II (The Leadership Phase)",
+            "form_name": "CAPF 60-92 (Cadet Leadership Feedback - Phase II)",
+            "url": "https://www.gocivilairpatrol.com/media/cms/CAPF_6092_F88D00D0FB843.pdf"
+        }
+    # Phase III: C/2d Lt to C/Capt
+    elif g in ["C/2D LT", "C/1ST LT", "C/CAPT"]:
+        return {
+            "phase": "Phase III (The Command Phase)",
+            "form_name": "CAPF 60-93 (Cadet Leadership Feedback - Phase III)",
+            "url": "https://www.gocivilairpatrol.com/media/cms/CAPF_6093_A876BCE22180A.pdf"
+        }
+    # Phase IV: C/Maj to C/Col
+    elif g in ["C/MAJ", "C/LTC", "C/COL"]:
+        return {
+            "phase": "Phase IV (The Executive Phase)",
+            "form_name": "CAPF 60-94 (Cadet Leadership Feedback - Phase IV)",
+            "url": "https://www.gocivilairpatrol.com/media/cms/CAPF_6094_55278EDDEBC4D.pdf"
+        }
+    
+    return {
+        "phase": "Phase I (The Learning Phase)",
+        "form_name": "CAPF 60-91 (Cadet Leadership Feedback - Phase I)",
+        "url": "https://www.gocivilairpatrol.com/media/cms/CAPF_6091_25B1D25BA2960.pdf"
+    }
+
 def detect_milestone_exam(target_ach_str):
-    """Maps target award to specific milestone exam name."""
     s = str(target_ach_str).lower().strip()
     if "achievement 3" in s or "wright" in s:
         return "Wright Brothers Award Exam"
@@ -212,7 +249,6 @@ with tab_req:
             cadet_row = progress_df[progress_df["Cadet Name"] == selected_cadet].iloc[0]
             working_ach = str(cadet_row.get("Working Towards Achievement No.", "N/A"))
             
-            # Extract CAP ID and format
             raw_cap_id = str(cadet_row.get("CAP ID", "")).replace(".0", "").strip()
             inferred_grade = infer_current_grade(working_ach)
 
@@ -226,7 +262,6 @@ with tab_req:
 
             st.info(f"**Cadet:** {selected_cadet} | **Target Achievement:** {working_ach}")
 
-            # Define new request types list
             all_request_types = [
                 "Drill Test", 
                 "PRB", 
@@ -237,7 +272,6 @@ with tab_req:
                 "Specialty Exam"
             ]
 
-            # Filter out Drill Test if Achievement 9+ or Non-Wright Milestone Award
             drill_allowed = is_drill_test_allowed(working_ach)
             if not drill_allowed:
                 available_types = [r for r in all_request_types if r != "Drill Test"]
@@ -247,7 +281,6 @@ with tab_req:
 
             req_type = st.selectbox("Request Type:*", available_types)
             
-            # If Milestone Exam selected, auto-select and allow confirmation/override
             selected_exam_name = ""
             if req_type == "Milestone Exam":
                 detected_exam = detect_milestone_exam(working_ach)
@@ -268,7 +301,7 @@ with tab_req:
             prereq_valid = True
             error_msgs = []
 
-            # CAP ID Validation (Must be exactly 6 digits)
+            # CAP ID Validation
             clean_cap_id = re.sub(r"\D", "", cap_id_input)
             if len(clean_cap_id) != 6:
                 prereq_valid = False
@@ -301,8 +334,16 @@ with tab_req:
                     st.error(f"❌ **Validation / Prerequisite Alert:** {msg}")
 
             with st.form("cadet_request_form", clear_on_submit=True):
-                st.markdown("#### Document Uploads (Required for Technical Writing / SDA)")
-                uploaded_file = st.file_uploader("Upload SDA Report / Reference Documents:", type=["pdf", "docx", "doc", "jpg", "png"])
+                st.markdown("#### Document Uploads")
+                
+                # Dynamic CAPF 60-90 routing for PRB requests
+                if req_type == "PRB":
+                    prb_info = get_capf60_90_info(grade_input)
+                    st.markdown(f"**Required Form:** Submit your **[{prb_info['form_name']}]({prb_info['url']})** for **{prb_info['phase']}** ({grade_input}).")
+                    uploaded_file = st.file_uploader(f"Upload completed {prb_info['form_name'].split(' ')[0]} PDF/Image:", type=["pdf", "docx", "doc", "jpg", "png"])
+                else:
+                    uploaded_file = st.file_uploader("Upload SDA Report, Essay, or Reference Documents (if applicable):", type=["pdf", "docx", "doc", "jpg", "png"])
+
                 comments = st.text_area("Additional Notes / Details for Staff:")
                 
                 submit_button = st.form_submit_button("Submit Request")
