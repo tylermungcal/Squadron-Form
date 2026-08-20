@@ -144,19 +144,28 @@ def generate_wednesdays_through_dec(start_date):
         is_cpft = is_4th_wednesday(current)
         is_5th = current.day >= 29
         is_holiday = (current.month == 11 and current.day >= 24) or (current.month == 12 and current.day >= 24)
+        is_halloween = (current.month == 10 and current.day == 28)
 
-        if is_holiday:
+        if is_halloween:
+            uod = "Utility Uniform (ABU/OCP)"
+            notes = "🎃 Halloween Party — Utility Uniform (CPFT tester cadets test in PTs then change into Utility)"
+            cat = "Fitness / Activity"
+            cpft_str = "✅ Yes (Optional)"
+        elif is_holiday:
             uod = "Civilian / N/A"
             notes = "🚫 No Meeting — Holiday Break"
             cat = "N/A"
+            cpft_str = "No"
         elif is_5th:
             uod = "Civilian / Activity"
             notes = "⚠️ No Requests Accepted — 5th Wednesday Event"
             cat = "Leadership / General"
+            cpft_str = "No"
         elif is_cpft:
             uod = "PT Uniform"
             notes = "CPFT Testing Night"
             cat = "Fitness / CPFT"
+            cpft_str = "✅ Yes"
         else:
             week_num = (current.day - 1) // 7 + 1
             if week_num == 1:
@@ -169,12 +178,13 @@ def generate_wednesdays_through_dec(start_date):
                 uod = "Utility Uniform (ABU/OCP)"
                 cat = "Character Development"
             notes = "Standard Requests Allowed"
+            cpft_str = "No"
 
         wednesdays.append({
             "Meeting Date": current.strftime("%d-%b-%Y"),
             "Training Focus": cat,
             "UOD": uod,
-            "4th Wed CPFT": "✅ Yes" if is_cpft else "No",
+            "4th Wed CPFT": cpft_str,
             "Status & Notes": notes
         })
         current += pd.Timedelta(days=7)
@@ -243,36 +253,46 @@ def load_schedule():
             u_lower = str(row["UOD"]).lower()
             
             is_cpft = is_4th_wednesday(dt) or "cpft" in f_lower or "pt" in u_lower
+            is_halloween = (dt.month == 10 and dt.day == 28) or "halloween" in f_lower
             
-            if any(kw in f_lower for kw in ["es", "emergency", "ground team"]):
-                cat = "Emergency Services (ES)"
-            elif any(kw in f_lower for kw in ["character", "moral", "cd"]):
-                cat = "Character Development"
-            elif any(kw in f_lower for kw in ["ae", "aerospace", "stem"]):
-                cat = "Aerospace Education"
-            elif is_cpft:
-                cat = "Fitness / CPFT"
+            if is_halloween:
+                cat = "Fitness / Activity"
+                uod_final = "Utility Uniform (ABU/OCP)"
+                notes = "🎃 Halloween Party — Utility Uniform (CPFT tester cadets test in PTs then change into Utility)"
+                cpft_flag = "✅ Yes (Optional)"
             else:
-                cat = "Leadership / General"
+                if any(kw in f_lower for kw in ["es", "emergency", "ground team"]):
+                    cat = "Emergency Services (ES)"
+                elif any(kw in f_lower for kw in ["character", "moral", "cd"]):
+                    cat = "Character Development"
+                elif any(kw in f_lower for kw in ["ae", "aerospace", "stem"]):
+                    cat = "Aerospace Education"
+                elif is_cpft:
+                    cat = "Fitness / CPFT"
+                else:
+                    cat = "Leadership / General"
 
-            is_5th = dt.day >= 29
-            is_party = any(kw in f_lower for kw in ["party", "social", "banquet"])
-            is_break = any(kw in f_lower for kw in ["break", "holiday", "canceled"])
+                is_5th = dt.day >= 29
+                is_party = any(kw in f_lower for kw in ["party", "social", "banquet"])
+                is_break = any(kw in f_lower for kw in ["break", "holiday", "canceled"])
 
-            if is_5th:
-                notes = "⚠️ No Requests — 5th Wednesday Event"
-            elif is_party:
-                notes = f"⚠️ No Requests — Social ({row['Focus']})"
-            elif is_break:
-                notes = f"🚫 No Meeting — {row['Focus']}"
-            else:
-                notes = "CPFT Testing Night" if is_cpft else "Standard Requests Allowed"
+                uod_final = row["UOD"]
+                cpft_flag = "✅ Yes" if is_cpft else "No"
+
+                if is_5th:
+                    notes = "⚠️ No Requests — 5th Wednesday Event"
+                elif is_party:
+                    notes = f"⚠️ No Requests — Social ({row['Focus']})"
+                elif is_break:
+                    notes = f"🚫 No Meeting — {row['Focus']}"
+                else:
+                    notes = "CPFT Testing Night" if is_cpft else "Standard Requests Allowed"
 
             condensed.append({
                 "Meeting Date": row["Meeting Date"],
                 "Training Focus": cat,
-                "UOD": row["UOD"],
-                "4th Wed CPFT": "✅ Yes" if is_cpft else "No",
+                "UOD": uod_final,
+                "4th Wed CPFT": cpft_flag,
                 "Status & Notes": notes
             })
         return pd.DataFrame(condensed)
