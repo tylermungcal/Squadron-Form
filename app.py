@@ -444,13 +444,71 @@ with tab_progress:
         st.error("Unable to load cadet progress data. Please check connection to Google Sheets.")
 
 # ---------------------------------------------------------
+# SCHEDULE LOADER & HELPER
+# ---------------------------------------------------------
+@st.cache_data(ttl=300)
+def load_schedule():
+    sheet_id = "17wdWuOFBFyR507_vBITsTkI8il7k-1gDjLLPtNcCzt8"
+    gid = "420770302"
+    url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
+    try:
+        df = pd.read_csv(url)
+        df.columns = [str(c).strip() for c in df.columns]
+        return df
+    except Exception:
+        # Fallback structured data
+        return pd.DataFrame([
+            {"Date": "1st Wednesday", "UOD": "ABU / OCP", "Focus": "Leadership / Drill", "Notes": "Standard Meeting"},
+            {"Date": "2nd Wednesday", "UOD": "Blues (Class B)", "Focus": "AE / PRBs", "Notes": "Standard Meeting"},
+            {"Date": "3rd Wednesday", "UOD": "ABU / OCP", "Focus": "Character / Safety", "Notes": "Standard Meeting"},
+            {"Date": "4th Wednesday", "UOD": "PT Uniform", "Focus": "CPFT / Testing", "Notes": "CPFT Night"},
+            {"Date": "5th Wednesday", "UOD": "Civilian / Activity", "Focus": "Special Event / Social", "Notes": "5th Wednesday Social"}
+        ])
+
+# ---------------------------------------------------------
 # TAB 4: WEDNESDAY SCHEDULE & UOD
 # ---------------------------------------------------------
 with tab_sched:
-    st.markdown("### 📅 Squadron Meeting Schedule & Uniform of the Day (UOD)")
-    st.caption("Reference this schedule from [153 Training Schedule Sheet](https://docs.google.com/spreadsheets/d/17wdWuOFBFyR507_vBITsTkI8il7k-1gDjLLPtNcCzt8/edit)")
+    st.markdown("### 📅 Wednesday Meeting Schedule & Uniform of the Day (UOD)")
+    st.caption("Reference schedule from [153 Training Schedule Sheet](https://docs.google.com/spreadsheets/d/17wdWuOFBFyR507_vBITsTkI8il7k-1gDjLLPtNcCzt8/edit#gid=420770302)")
     
     if not schedule_df.empty:
-        st.dataframe(schedule_df, use_container_width=True, hide_index=True)
+        condensed_schedule = []
+
+        for idx, row in schedule_df.iterrows():
+            date_val = str(row.get("Date", row.get("Meeting Date", f"Meeting #{idx+1}"))).strip()
+            uod_val = str(row.get("UOD", row.get("Uniform", "ABU / OCP"))).strip()
+            focus_val = str(row.get("Focus", row.get("Event", row.get("Notes", "")))).strip()
+
+            date_lower = date_val.lower()
+            focus_lower = focus_val.lower()
+
+            # 1. Detect 4th Wednesday / CPFT
+            is_cpft = "4th" in date_lower or "cpft" in focus_lower or "pt" in uod_val.lower()
+            cpft_status = "✅ Yes" if is_cpft else "No"
+
+            # 2. Check for 5th Wednesdays, Parties, or Breaks
+            is_5th_wed = "5th" in date_lower or "5th wednesday" in focus_lower
+            is_party = any(kw in focus_lower for kw in ["party", "social", "banquet", "potluck"])
+            is_break = any(kw in focus_lower for kw in ["break", "holiday", "no meeting", "canceled", "cancelled", "thanksgiving", "christmas"])
+
+            if is_5th_wed:
+                notes = "⚠️ No Requests Accepted — 5th Wednesday Event"
+            elif is_party:
+                notes = f"⚠️ No Requests Accepted — Party/Social ({focus_val if focus_val else 'Squadron Event'})"
+            elif is_break:
+                notes = f"🚫 No Meeting / Requests — {focus_val if focus_val else 'Break/Holiday'}"
+            else:
+                notes = "Standard Requests Allowed" if not is_cpft else "CPFT Testing Night"
+
+            condensed_schedule.append({
+                "Meeting Date": date_val,
+                "UOD": uod_val if uod_val and uod_val.lower() != "nan" else "ABU / OCP",
+                "4th Wed CPFT Night": cpft_status,
+                "Status & Notes": notes
+            })
+
+        display_schedule_df = pd.DataFrame(condensed_schedule)
+        st.dataframe(display_schedule_df, use_container_width=True, hide_index=True)
     else:
-        st.info("No schedule data loaded.")
+        st.info("No schedule data currently loaded.")
