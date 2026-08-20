@@ -1,5 +1,6 @@
 import base64
 import io
+import re
 import requests
 import pandas as pd
 import streamlit as st
@@ -9,7 +10,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 
 # ---------------------------------------------------------
-# PAGE CONFIG & SQUADRON 153 DESIGN LANGUAGE
+# PAGE CONFIG & STYLING
 # ---------------------------------------------------------
 st.set_page_config(page_title="Squadron 153 Request Portal", page_icon="✈️", layout="wide")
 
@@ -137,6 +138,57 @@ schedule_df = load_schedule()
 backend_df = load_submitted_backend()
 
 # ---------------------------------------------------------
+# HELPER FUNCTIONS FOR GRADE & MILESTONE MAPPING
+# ---------------------------------------------------------
+def infer_current_grade(target_ach_str):
+    """Determines current rank based on target achievement."""
+    s = str(target_ach_str).lower().strip()
+    
+    # Check for specific numbers or awards
+    if "achievement 1" in s: return "C/Amn"
+    if "achievement 2" in s or "curry" in s: return "C/A1C"
+    if "achievement 3" in s or "wright" in s: return "C/SrA"
+    if "achievement 4" in s or "arnold" in s: return "C/SSgt"
+    if "achievement 5" in s or "fechet" in s: return "C/TSgt"
+    if "achievement 6" in s or "lemay" in s: return "C/MSgt"
+    if "achievement 7" in s or "rikenbacker" in s: return "C/SMSgt"
+    if "achievement 8" in s or "mitchell" in s: return "C/CMSgt"
+    if "achievement 9" in s or "earhart" in s: return "C/2d Lt"
+    if "achievement 10" in s: return "C/2d Lt"
+    if "achievement 11" in s: return "C/1st Lt"
+    if "achievement 12" in s or "eaker" in s: return "C/1st Lt"
+    if "achievement 13" in s or "spaatz" in s: return "C/Capt"
+    if "achievement 14" in s or "achievement 15" in s or "achievement 16" in s: return "C/Maj"
+    
+    return "Cadet"
+
+def detect_milestone_exam(target_ach_str):
+    """Maps target award to specific milestone exam name."""
+    s = str(target_ach_str).lower().strip()
+    if "achievement 3" in s or "wright" in s:
+        return "Wright Brothers Award Exam"
+    elif "achievement 8" in s or "mitchell" in s:
+        return "Billy Mitchell Award Exam"
+    elif "achievement 11" in s or "earhart" in s:
+        return "Amelia Earhart Award Exam"
+    elif "achievement 13" in s or "eaker" in s:
+        return "Ira C. Eaker Award Exam"
+    elif "spaatz" in s:
+        return "General Carl A. Spaatz Award Exam"
+    return "General Milestone Exam"
+
+def is_drill_test_allowed(target_ach_str):
+    target = str(target_ach_str).lower()
+    if "wright" in target or "achievement 3" in target:
+        return True
+    if any(m in target for m in ["mitchell", "earhart", "eaker", "spaatz"]):
+        return False
+    for i in range(9, 20):
+        if f"achievement {i}" in target:
+            return False
+    return True
+
+# ---------------------------------------------------------
 # TABS SETUP
 # ---------------------------------------------------------
 tab_req, tab_dashboard, tab_progress, tab_sched = st.tabs([
@@ -145,27 +197,6 @@ tab_req, tab_dashboard, tab_progress, tab_sched = st.tabs([
     "📊 Cadet Progress Report", 
     "📅 Wednesday Schedule & UOD"
 ])
-
-# ---------------------------------------------------------
-# HELPER: CHECK IF DRILL TEST IS ALLOWED
-# ---------------------------------------------------------
-def is_drill_test_allowed(target_ach_str):
-    target = str(target_ach_str).lower()
-    
-    # Allowed specifically for Wright Brothers Award (Achievement 3)
-    if "wright" in target or "achievement 3" in target:
-        return True
-        
-    # Block for Mitchell, Earhart, Eaker, Spaatz milestone awards
-    if any(m in target for m in ["mitchell", "earhart", "eaker", "spaatz"]):
-        return False
-        
-    # Check for Achievement 9 or higher
-    for i in range(9, 20):
-        if f"achievement {i}" in target:
-            return False
-            
-    return True
 
 # ---------------------------------------------------------
 # TAB 1: SUBMIT REQUEST
@@ -181,83 +212,103 @@ with tab_req:
             cadet_row = progress_df[progress_df["Cadet Name"] == selected_cadet].iloc[0]
             working_ach = str(cadet_row.get("Working Towards Achievement No.", "N/A"))
             
-            # Auto-populated parameters
+            # Extract CAP ID and format
+            raw_cap_id = str(cadet_row.get("CAP ID", "")).replace(".0", "").strip()
+            inferred_grade = infer_current_grade(working_ach)
+
             col1, col2, col3 = st.columns(3)
             with col1:
-                cap_id = st.text_input("CAP ID:", value=str(cadet_row.get("CAP ID", "")))
+                cap_id_input = st.text_input("CAP ID (6 Digits):*", value=raw_cap_id)
             with col2:
-                grade = st.text_input("Current Grade:", value=str(cadet_row.get("Grade", "")))
+                grade_input = st.text_input("Current Grade (Auto-Inferred):*", value=inferred_grade)
             with col3:
-                flight = st.selectbox("Flight:", ["Alpha", "Bravo", "Charlie", "Delta", "Staff", "HQ"])
+                flight_input = st.selectbox("Flight:*", ["Alpha", "Bravo", "Charlie", "CTF", "Support", "Line"])
 
             st.info(f"**Cadet:** {selected_cadet} | **Target Achievement:** {working_ach}")
 
-            # Define full original options list
+            # Define new request types list
             all_request_types = [
                 "Drill Test", 
-                "Milestone Drill Test", 
-                "Staff Duty Analysis (SDA) - Written Report", 
-                "Staff Duty Analysis (SDA) - Oral Presentation", 
-                "Promotion Review Board (PRB)", 
-                "Staff Review Board", 
-                "CPFT Testing", 
-                "Feedback Request", 
-                "Form 60-80 / PT Waiver"
+                "PRB", 
+                "4th Wednesday CPFT", 
+                "Milestone Exam", 
+                "Technical Writing Submission (SDA)", 
+                "Essay Submission", 
+                "Specialty Exam"
             ]
 
             # Filter out Drill Test if Achievement 9+ or Non-Wright Milestone Award
             drill_allowed = is_drill_test_allowed(working_ach)
             if not drill_allowed:
-                available_types = [r for r in all_request_types if "Drill" not in r]
+                available_types = [r for r in all_request_types if r != "Drill Test"]
                 st.caption("ℹ️ *Drill Tests are not applicable for Achievement 9+ or Milestone Awards (except Wright Brothers).*")
             else:
                 available_types = all_request_types
 
             req_type = st.selectbox("Request Type:*", available_types)
             
-            # Extract Cadet Progress Fields
+            # If Milestone Exam selected, auto-select and allow confirmation/override
+            selected_exam_name = ""
+            if req_type == "Milestone Exam":
+                detected_exam = detect_milestone_exam(working_ach)
+                exam_options = [
+                    "Wright Brothers Award Exam", 
+                    "Billy Mitchell Award Exam", 
+                    "Amelia Earhart Award Exam", 
+                    "Ira C. Eaker Award Exam", 
+                    "General Carl A. Spaatz Award Exam"
+                ]
+                default_idx = exam_options.index(detected_exam) if detected_exam in exam_options else 0
+                selected_exam_name = st.selectbox("Select Target Milestone Exam:*", exam_options, index=default_idx)
+
+            # Rule Crosschecking Logic
             lead_val = str(cadet_row.get("Leadership", "")).strip()
             ae_val = str(cadet_row.get("Aerospace (AE) No. Completed", "0")).strip()
             
             prereq_valid = True
             error_msgs = []
 
-            # Rule Crosschecking Logic
-            if "Drill Test" in req_type:
+            # CAP ID Validation (Must be exactly 6 digits)
+            clean_cap_id = re.sub(r"\D", "", cap_id_input)
+            if len(clean_cap_id) != 6:
+                prereq_valid = False
+                error_msgs.append("CAP ID must be exactly **6 digits** (no letters or extra symbols).")
+
+            if req_type == "Drill Test":
                 if not lead_val or lead_val in ["None", "nan"] or ae_val in ["0", "None", "nan", ""]:
                     prereq_valid = False
                     error_msgs.append("To request a **Drill Test**, you must have completed **Learn to Lead** and **AE Dimensions**.")
             
-            elif "Staff Duty Analysis" in req_type:
+            elif req_type in ["Technical Writing Submission (SDA)", "Essay Submission"]:
                 if not lead_val or lead_val in ["None", "nan"] or ae_val in ["0", "None", "nan", ""]:
                     prereq_valid = False
-                    error_msgs.append("To request an **SDA**, your **Learn to Lead** and **AE Dimensions** must be completed.")
+                    error_msgs.append("To request an **SDA / Essay Submission**, your **Learn to Lead** and **AE Dimensions** must be completed.")
 
             st.markdown("#### Select Target Wednesday Date")
             target_date = st.date_input("Target Meeting Date:", value=datetime.now().date())
 
-            if req_type == "Promotion Review Board (PRB)":
+            if req_type == "PRB":
                 if "Achievement 4" in working_ach or any(f"Achievement {i}" in working_ach for i in range(5, 17)):
                     st.warning("⚠️ **Reminder:** PRB Requests for Achievement 4+ must take place on a **Blues Night**.")
 
-            if req_type == "CPFT Testing":
+            if req_type == "4th Wednesday CPFT":
                 if target_date.weekday() != 2:
                     prereq_valid = False
                     error_msgs.append("CPFT Testing must take place on a **Wednesday**.")
 
             if not prereq_valid:
                 for msg in error_msgs:
-                    st.error(f"❌ **Prerequisite Alert:** {msg}")
+                    st.error(f"❌ **Validation / Prerequisite Alert:** {msg}")
 
             with st.form("cadet_request_form", clear_on_submit=True):
-                st.markdown("#### Document Uploads (Required for SDA)")
+                st.markdown("#### Document Uploads (Required for Technical Writing / SDA)")
                 uploaded_file = st.file_uploader("Upload SDA Report / Reference Documents:", type=["pdf", "docx", "doc", "jpg", "png"])
                 comments = st.text_area("Additional Notes / Details for Staff:")
                 
                 submit_button = st.form_submit_button("Submit Request")
                 if submit_button:
                     if not prereq_valid:
-                        st.error("Please resolve the prerequisite conflicts listed above before submitting.")
+                        st.error("Please resolve the prerequisite and CAP ID errors listed above before submitting.")
                     else:
                         file_link = ""
                         if uploaded_file is not None:
@@ -265,7 +316,11 @@ with tab_req:
                             with st.spinner("Uploading document to Google Drive..."):
                                 file_link = upload_file_to_drive(uploaded_file, folder_id)
 
-                        st.success(f"Request for {req_type} successfully submitted for {selected_cadet}!")
+                        submission_summary = f"Request for **{req_type}**"
+                        if selected_exam_name:
+                            submission_summary += f" ({selected_exam_name})"
+                            
+                        st.success(f"{submission_summary} successfully submitted for {selected_cadet} (CAP ID: {clean_cap_id}, {grade_input}, {flight_input} Flight)!")
                         if file_link:
                             st.markdown(f"📄 **Uploaded Document:** [View in Drive]({file_link})")
     else:
@@ -276,7 +331,7 @@ with tab_req:
 # ---------------------------------------------------------
 with tab_dashboard:
     st.markdown("### 📈 Live Submitted Requests Dashboard")
-    st.caption("Synchronized with [Promotion Form Request Backend Sheet](https://docs.google.com/spreadsheets/d/1aWN5BSWlMHYwBzrmijnlBEhP4ZEU9sJjx3VLIxqHnTE/edit?gid=0#gid=0)")
+    st.caption("Synchronized with [Promotion Form Request Backend Sheet](https://docs.google.com/spreadsheets/d/1aWN5BSWlMHYwBzrmijnlBEhP4ZEU9sJjx3VLIxqHnTE/edit#gid=0)")
     
     if not backend_df.empty:
         st.dataframe(backend_df, use_container_width=True, hide_index=True)
