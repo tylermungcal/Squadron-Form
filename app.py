@@ -14,7 +14,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# Custom CSS for styling
+# Custom CSS
 st.markdown("""
     <style>
     .main-header {
@@ -79,13 +79,16 @@ def upload_file_to_drive(uploaded_file, folder_id):
             body=file_metadata,
             media_body=media,
             fields='id, webViewLink',
-            supportsAllDrives=True  # <--- Fixes Shared Drive 404 permissions
+            supportsAllDrives=True  # Enables upload inside Shared Drives
         ).execute()
         return file.get('webViewLink')
     except Exception as e:
         st.error(f"Error uploading file: {e}")
         return None
 
+# ---------------------------------------------------------
+# DATA LOADERS
+# ---------------------------------------------------------
 @st.cache_data(ttl=300)
 def load_cadet_progress():
     sheet_id = "1dUUf4xSWFX8KJoJPhqXd2glYmVGjVIZplvrToVd_Uyg"
@@ -130,10 +133,11 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "📅 Wednesday Schedule & UOD"
 ])
 
+# ---------------------------------------------------------
 # TAB 1: FORM SUBMISSION
+# ---------------------------------------------------------
 with tab1:
     st.subheader("Cadet Request Form")
-    
     cadet_df = load_cadet_progress()
     
     if not cadet_df.empty and "Name" in cadet_df.columns:
@@ -143,7 +147,7 @@ with tab1:
     else:
         selected_name = st.text_input("Enter Your Full Name:*")
 
-    # Auto-fill fields if selected from progress sheet
+    # Auto-fill fields
     cadet_email, cap_id, grade, flight = "", "", "", ""
     if selected_name and selected_name != "-- Select Name --" and not cadet_df.empty:
         match = cadet_df[cadet_df["Name"] == selected_name]
@@ -180,12 +184,10 @@ with tab1:
 
     target_date = st.date_input("Target Date for Request/Testing:", min_value=datetime.date.today())
 
-    # File Uploaders
     st.write("---")
     st.subheader("Document Uploads")
     
     upload_folder_id = "12Z89jcG91dlFk19bpU5acPhSdiL-kK2z"
-    
     uploaded_file = st.file_uploader("Upload Primary Document (SDA, Essay, PRB Form, etc.):", type=["pdf", "docx", "doc", "png", "jpg"])
     proof_file = st.file_uploader("Upload Proof/Prerequisite Document (Optional):", type=["pdf", "docx", "doc", "png", "jpg"])
 
@@ -207,9 +209,7 @@ with tab1:
                 if proof_file:
                     proof_url = upload_file_to_drive(proof_file, upload_folder_id) or ""
 
-                # Webhook post to Apps Script Backend
-                webhook_url = "https://script.google.com/macros/s/AKfycbz_Placeholder/exec"  # Replace with active webhook URL if needed
-                
+                webhook_url = "https://script.google.com/macros/s/AKfycbz_Placeholder/exec"
                 payload = {
                     "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     "cadet_name": selected_name,
@@ -233,25 +233,50 @@ with tab1:
                 except Exception as e:
                     st.error(f"Error posting submission to backend: {e}")
 
-# TAB 2: LIVE DASHBOARD
+# ---------------------------------------------------------
+# TAB 2: LIVE DASHBOARD (Password Protected)
+# ---------------------------------------------------------
 with tab2:
     st.subheader("Live Request Status")
-    backend_df = load_submitted_backend()
-    if not backend_df.empty:
-        st.dataframe(backend_df, use_container_width=True)
+    
+    password = st.text_input("Enter Staff Password to View Requests:", type="password")
+    if password == "sq153staff":
+        backend_df = load_submitted_backend()
+        if not backend_df.empty:
+            st.dataframe(backend_df, use_container_width=True)
+        else:
+            st.info("No requests recorded yet.")
+    elif password:
+        st.error("Incorrect password.")
     else:
-        st.info("No requests recorded yet.")
+        st.warning("Please enter the password to access the staff dashboard.")
 
+# ---------------------------------------------------------
 # TAB 3: CADET PROGRESS REPORT
+# ---------------------------------------------------------
 with tab3:
     st.subheader("Cadet Progress Overview")
     progress_df = load_cadet_progress()
+    
     if not progress_df.empty:
-        st.dataframe(progress_df, use_container_width=True)
+        if "Name" in progress_df.columns:
+            search_names = progress_df["Name"].dropna().unique().tolist()
+            search_names.sort()
+            search_cadet = st.selectbox("Search Cadet Progress:", ["-- Show All Cadets --"] + search_names)
+            
+            if search_cadet != "-- Show All Cadets --":
+                filtered_df = progress_df[progress_df["Name"] == search_cadet]
+                st.dataframe(filtered_df, use_container_width=True)
+            else:
+                st.dataframe(progress_df, use_container_width=True)
+        else:
+            st.dataframe(progress_df, use_container_width=True)
     else:
         st.info("Progress data currently unavailable.")
 
+# ---------------------------------------------------------
 # TAB 4: SCHEDULE & UOD
+# ---------------------------------------------------------
 with tab4:
     st.subheader("Wednesday Schedule & Uniform of the Day (UOD)")
     schedule_df = load_training_schedule()
