@@ -435,9 +435,9 @@ with tab_req:
 
             all_request_types = [
                 "-- Select Request Type --",
+                "4th Wednesday CPFT",
                 "Drill Test", 
                 "PRB", 
-                "4th Wednesday CPFT", 
                 "Milestone Exam", 
                 "Technical Writing Submission (SDA)", 
                 "Essay Submission", 
@@ -528,21 +528,21 @@ with tab_req:
                     prereq_valid = False
                     error_msgs.append("No requests are permitted on **Party or Holiday Break dates** (e.g., Halloween Party / Holiday Party / Xmas Break / 5th Wednesday).")
 
-                # 4. 4th Wednesday Uniform Disclaimer (Only shows when request type is active)
-                if is_4th_wednesday(target_date):
-                    st.info("ℹ️ **4th Wednesday Note:** Arrive in **PTs** for fitness testing, then change into your **Utility Uniform (ABU/OCP)** after testing.")
-
                 if req_type == "PRB":
                     if "Achievement 4" in working_ach or any(f"Achievement {i}" in working_ach for i in range(5, 17)):
                         st.warning("⚠️ **Reminder:** PRB Requests for Achievement 4+ must take place on a **Blues Night**.")
 
+                # Display Validation Errors
                 if not prereq_valid:
                     for msg in error_msgs:
                         st.error(f"❌ **Validation Alert:** {msg}")
 
+                # 4. 4th Wednesday Uniform Disclaimer (ONLY renders when '4th Wednesday CPFT' is chosen)
+                if req_type == "4th Wednesday CPFT":
+                    st.info("ℹ️ **4th Wednesday Note:** Arrive in PTs for testing at 1800, then change into Utility after testing.")
+
                 with st.form("cadet_request_form", clear_on_submit=True):
                     # Check if document uploads should be rendered
-                    # Exclude uploads for: Drill Test, 4th Wed CPFT, and Milestone Exams (excluding Eaker/Spaatz essays if applicable)
                     no_upload_needed = req_type in ["Drill Test", "4th Wednesday CPFT"] or (
                         req_type == "Milestone Exam" and selected_exam_name not in ["Ira C. Eaker Award Exam", "General Carl A. Spaatz Award Exam"]
                     )
@@ -591,19 +591,25 @@ with tab_req:
 # ---------------------------------------------------------
 with tab_dashboard:
     st.markdown("### 📈 Live Submitted Requests Dashboard")
-    st.caption("Synchronized with [Promotion Form Request Backend Sheet](https://docs.google.com/spreadsheets/d/1aWN5BSWlMHYwBzrmijnlBEhP4ZEU9sJjx3VLIxqHnTE/edit#gid=0)")
     
-    if not backend_df.empty:
-        st.dataframe(backend_df, use_container_width=True, hide_index=True)
+    dash_password = st.text_input("🔒 Enter Staff Access Password:", type="password")
+    
+    if dash_password == "1530":
+        st.success("Access Granted")
+        if not backend_df.empty:
+            st.dataframe(backend_df, use_container_width=True, hide_index=True)
+        else:
+            st.info("No request records currently logged.")
+    elif dash_password:
+        st.error("Incorrect password. Please enter valid staff credentials.")
     else:
-        st.info("No request records currently logged.")
+        st.info("Password required to view live request dashboard.")
 
 # ---------------------------------------------------------
 # TAB 3: CADET PROGRESS REPORT INTEGRATION
 # ---------------------------------------------------------
 with tab_progress:
     st.markdown("### 📊 Cadet Progress Lookup")
-    st.caption("Live data from [SQ 153 Cadet Progress Sheet](https://docs.google.com/spreadsheets/d/1dUUf4xSWFX8KJoJPhqXd2glYmVGjVIZplvrToVd_Uyg/edit#gid=1661632143)")
     
     if not progress_df.empty:
         search_query = st.text_input("🔍 Search by Cadet Name or CAP ID:", placeholder="Type a name (e.g., 'Smith') or CAP ID...").strip()
@@ -657,7 +663,6 @@ with tab_progress:
 # ---------------------------------------------------------
 with tab_sched:
     st.markdown("### 📅 Upcoming Wednesday Schedule & UOD (Through Dec 2026)")
-    st.caption("Live feed from [153 Training Schedule Sheet](https://docs.google.com/spreadsheets/d/17wdWuOFBFyR507_vBITsTkI8il7k-1gDjLLPtNcCzt8/edit#gid=127391265)")
     
     display_schedule_df = load_schedule()
     
