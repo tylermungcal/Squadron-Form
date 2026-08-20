@@ -614,42 +614,41 @@ with tab_progress:
     if not progress_df.empty:
         df_display = progress_df.copy()
         
-        # Match actual Google Sheet headers to target display names
+        # Map exact sheet column headers to clean display labels
         column_mapping = {
-            "Cadet Name": "Cadet Name",
             "CAP ID": "CAPID",
-            "CAPID": "CAPID",
+            "Cadet Name": "Cadet Name",
             "Assigned Flight": "Assigned Flight",
-            "Achv Working Towards": "Achievement Working Towards",
+            "Working Towards Achievement No.": "Achievement Working Towards",
             "Leadership": "Leadership",
-            "Drill Test": "Drill Test",
             "AE Req Date": "AE Req Date",
-            "Fitness / CPFT Date": "Fitness",
+            "Drill Test": "Drill Test",
+            "Fitness": "Fitness (CPFT)",
             "PRB": "PRB",
-            "Eligible Date": "Promotion Eligible Date",
-            "Notes": "Notes",
+            "Promotion Eligible Date": "Promotion Eligible Date",
+            "Notes: Needed for Promotion": "Notes: Needed for Promotion",
             "PT Expiry": "PT Expiry"
         }
         
         df_display = df_display.rename(columns=column_mapping)
 
-        # 11 Target columns requested
+        # The 12 Target columns to display in the overview table
         target_columns = [
             "Cadet Name",
             "CAPID",
             "Assigned Flight",
             "Achievement Working Towards",
             "Leadership",
-            "Drill Test",
             "AE Req Date",
-            "Fitness",
+            "Drill Test",
+            "Fitness (CPFT)",
             "PRB",
             "Promotion Eligible Date",
-            "Notes",
+            "Notes: Needed for Promotion",
             "PT Expiry"
         ]
 
-        # Build dropdown options mapping both Name and CAPID
+        # Build dropdown options mapping both Cadet Name and CAPID
         search_options = [""]
         option_map = {}
 
@@ -674,7 +673,7 @@ with tab_progress:
             placeholder="Type Name or CAPID..."
         )
 
-        # Render dataframe only when cadet is selected
+        # Render dataframe only when a cadet is selected
         if selected_option and selected_option in option_map:
             selected_idx = option_map[selected_option]
             filtered_df = df_display.iloc[[selected_idx]]
