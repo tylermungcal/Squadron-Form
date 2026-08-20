@@ -591,16 +591,36 @@ with tab_req:
 with tab_dashboard:
     st.markdown("### Live Request Status Dashboard")
     
-    # Password Lock
+    # Password Lock Gate
     dashboard_password = st.text_input("Enter Dashboard Password:", type="password", key="dash_pass")
     
     if dashboard_password == "1530":
         st.success("Access Granted")
         st.markdown("---")
+        
+        # Load backend requests CSV (Ensure URL matches your backend spreadsheet)
+        backend_url = "https://docs.google.com/spreadsheets/d/1aWN5BSWlMHYwBzrmijnlBEhP4ZEU9sJjx3VLIxqHnTE/export?format=csv&gid=0"
+        
+        try:
+            backend_df = pd.read_csv(backend_url)
+            backend_df.columns = backend_df.columns.str.strip()
+        except Exception as e:
+            backend_df = pd.DataFrame()
+        
         if not backend_df.empty:
-            st.dataframe(backend_df, use_container_width=True)
+            m1, m2 = st.columns(2)
+            m1.metric("Total Requests Recorded", len(backend_df))
+            
+            # Display status metrics if Status column exists
+            status_col = [col for col in backend_df.columns if "status" in col.lower()]
+            if status_col:
+                pending_cnt = len(backend_df[backend_df[status_col[0]].astype(str).str.lower().str.contains("pending", na=False)])
+                m2.metric("Pending Requests", pending_cnt)
+
+            st.dataframe(backend_df, use_container_width=True, hide_index=True)
         else:
-            st.info("No requests currently recorded.")
+            st.info("No requests currently recorded or unable to load backend sheet.")
+            
     elif dashboard_password != "":
         st.error("Incorrect password. Access denied.")
     else:
