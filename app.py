@@ -21,13 +21,6 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* Input fields and selects styling */
-    .stTextInput input, .stSelectbox div[data-baseweb="select"], .stDateInput input {
-        background-color: #1A4470 !important;
-        color: #ffffff !important;
-        border-radius: 6px;
-    }
-
     /* Completely hide active tab blue underline / highlight border */
     [data-baseweb="tab-highlight"], 
     [data-baseweb="tab-border"], 
@@ -65,12 +58,11 @@ st.markdown("""
     div[data-testid="stFileUploader"] section {
         border: 2px dashed #ffffff !important;
         border-radius: 8px !important;
-        background-color: rgba(26, 68, 112, 0.6) !important;
     }
 
     /* BUTTON STYLING */
     .stButton>button {
-        background-color: #1A4470 !important;
+        background-color: #002244 !important;
         color: #ffffff !important;
         border: 1px solid #FFCC00 !important;
         border-radius: 6px !important;
