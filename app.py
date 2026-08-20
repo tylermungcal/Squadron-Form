@@ -550,7 +550,7 @@ with tab_req:
                 with st.form("cadet_request_form", clear_on_submit=True):
                     comments = st.text_area("Additional Notes / Details for Staff:")
                     submit_button = st.form_submit_button("Submit Request")
-
+        
                     if submit_button:
                         if not prereq_valid:
                             st.error("Please resolve all validation errors before submitting.")
@@ -583,7 +583,7 @@ with tab_req:
                                 try:
                                     res = requests.post(webhook_url, json=payload)
                                     if res.status_code == 200:
-                                        st.success("✅ Request submitted successfully! Your submission will now appear on the backend sheet and Live Dashboard.")
+                                        st.success("Request submitted successfully!")
                                         st.cache_data.clear()
                                     else:
                                         st.error(f"Failed to post to backend sheet. Server status code: {res.status_code}")
@@ -596,40 +596,37 @@ with tab_req:
 with tab_dashboard:
     st.markdown("### Live Request Status Dashboard")
     
-    # Password Lock Gate
-    dashboard_password = st.text_input("Enter Dashboard Password:", type="password", key="dash_pass")
-    
-    if dashboard_password == "1530":
-        st.success("Access Granted")
+    # Session state for locking/unlocking
+    if "dash_authenticated" not in st.session_state:
+        st.session_state["dash_authenticated"] = False
+
+    if not st.session_state["dash_authenticated"]:
+        dashboard_password = st.text_input("Enter Dashboard Password:", type="password", key="dash_pass")
+        if dashboard_password == "1530":
+            st.session_state["dash_authenticated"] = True
+            st.rerun()
+        elif dashboard_password != "":
+            st.error("Incorrect password. Access denied.")
+        else:
+            st.warning("🔒 This dashboard is password protected. Please enter the password above.")
+    else:
+        col_title, col_lock = st.columns([4, 1])
+        with col_title:
+            st.success("Access Granted")
+        with col_lock:
+            if st.button("🔒 Lock Dashboard"):
+                st.session_state["dash_authenticated"] = False
+                st.rerun()
+
         st.markdown("---")
         
-        # Load backend requests CSV (Ensure URL matches your backend spreadsheet)
-        backend_url = "https://docs.google.com/spreadsheets/d/1aWN5BSWlMHYwBzrmijnlBEhP4ZEU9sJjx3VLIxqHnTE/export?format=csv&gid=0"
+        # Freshly read backend entries
+        fresh_backend_df = load_submitted_backend()
         
-        try:
-            backend_df = pd.read_csv(backend_url)
-            backend_df.columns = backend_df.columns.str.strip()
-        except Exception as e:
-            backend_df = pd.DataFrame()
-        
-        if not backend_df.empty:
-            m1, m2 = st.columns(2)
-            m1.metric("Total Requests Recorded", len(backend_df))
-            
-            # Display status metrics if Status column exists
-            status_col = [col for col in backend_df.columns if "status" in col.lower()]
-            if status_col:
-                pending_cnt = len(backend_df[backend_df[status_col[0]].astype(str).str.lower().str.contains("pending", na=False)])
-                m2.metric("Pending Requests", pending_cnt)
-
-            st.dataframe(backend_df, use_container_width=True, hide_index=True)
+        if not fresh_backend_df.empty:
+            st.dataframe(fresh_backend_df, use_container_width=True, hide_index=True)
         else:
             st.info("No requests currently recorded or unable to load backend sheet.")
-            
-    elif dashboard_password != "":
-        st.error("Incorrect password. Access denied.")
-    else:
-        st.warning("🔒 This dashboard is password protected. Please enter the password above.")
 
 # ---------------------------------------------------------
 # TAB 3: CADET PROGRESS REPORT
