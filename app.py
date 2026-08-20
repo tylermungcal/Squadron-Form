@@ -109,6 +109,10 @@ backend_df = load_submitted_backend()
 # ---------------------------------------------------------
 # CALENDAR & SCHEDULE HELPERS
 # ---------------------------------------------------------
+# ---------------------------------------------------------
+# CALENDAR & SCHEDULE HELPERS
+# ---------------------------------------------------------
+
 def is_4th_wednesday(date_obj):
     if date_obj.weekday() != 2:
         return False
@@ -123,6 +127,9 @@ def generate_wednesdays_through_dec(start_date):
     current += pd.Timedelta(days=days_ahead)
     end_date = datetime(2026, 12, 31).date()
 
+    # Track alternating regular meeting count
+    meeting_counter = 0
+
     while current <= end_date:
         is_cpft = is_4th_wednesday(current)
         is_5th = current.day >= 29
@@ -131,24 +138,9 @@ def generate_wednesdays_through_dec(start_date):
         is_thanksgiving_break = (current.month == 11 and current.day >= 24)
         is_halloween = (current.month == 10 and current.day == 28)
 
-        week_num = (current.day - 1) // 7 + 1
-        
-        # Determine Training Focus
-        if is_xmas_break or is_thanksgiving_break or is_holiday_party or is_halloween or is_5th:
-            cat = "N/A"
-        elif week_num == 1:
-            cat = "Safety"
-        elif week_num == 2:
-            cat = "Aerospace Education (AE)"
-        elif week_num == 3:
-            cat = "Character Development"
-        elif week_num == 4:
-            cat = "Safety"
-        else:
-            cat = "Character Development"
-
+        # Special events and party nights
         if is_xmas_break or is_thanksgiving_break:
-            uod = "Civilian / N/A"
+            uod = "N/A"
             notes = "🚫 No Meeting — Holiday Break"
             cpft_str = "No"
         elif is_holiday_party:
@@ -156,21 +148,24 @@ def generate_wednesdays_through_dec(start_date):
             notes = "🎄 Holiday Party — No Requests Permitted"
             cpft_str = "No"
         elif is_halloween:
-            uod = "Utility Uniform (ABU/OCP)"
+            uod = "Costumes"
             notes = "🎃 Halloween Party — No Requests Permitted"
             cpft_str = "No"
         elif is_5th:
             uod = "Civilian / Activity"
             notes = "⚠️ No Requests Accepted — 5th Wednesday Event"
             cpft_str = "No"
-        elif is_cpft:
-            uod = "Utility Uniform (ABU/OCP)"
-            notes = "CPFT Testing Night (Arrive in PTs, change to Utility)"
-            cpft_str = "✅ Yes"
         else:
-            uod = "Blues (Class B)" if week_num == 2 else "Utility Uniform (ABU/OCP)"
-            notes = "Standard Requests Allowed"
-            cpft_str = "No"
+            # Regular meeting days: Alternate between Utility and Blues
+            uod = "Utility Uniform (ABU/OCP)" if (meeting_counter % 2 == 0) else "Blues (Class B)"
+            meeting_counter += 1
+
+            if is_cpft:
+                notes = "CPFT Testing Night (Arrive in PTs, change to Utility)"
+                cpft_str = "✅ Yes"
+            else:
+                notes = "Standard Requests Allowed"
+                cpft_str = "No"
 
         wednesdays.append({
             "Meeting Date": current.strftime("%d-%b-%Y"),
@@ -185,107 +180,6 @@ def generate_wednesdays_through_dec(start_date):
 @st.cache_data(ttl=60)
 def load_schedule():
     today = datetime.now().date()
-    sheet_id = "17wdWuOFBFyR507_vBITsTkI8il7k-1gDjLLPtNcCzt8"
-    tabs_gids = [
-        ("AUG 26", "420770302"),
-        ("SEP 26", "1383777558"),
-        ("OCT 26", "1182276527"),
-        ("NOV 26", "1905667352"),
-        ("DEC 26", "165741634")
-    ]
-    parsed_meetings = []
-    
-    for tab_name, gid in tabs_gids:
-        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
-        try:
-            raw_df = pd.read_csv(url, header=None)
-            for i, row in raw_df.iterrows():
-                row_str = " ".join(row.dropna().astype(str))
-                if "foxhunt" in row_str.lower():
-                    continue
-                match = re.search(r"(\d{1,2}-(?:\w+|\d{1,2})-\d{2,4})", row_str, re.IGNORECASE)
-                if match:
-                    date_raw = match.group(1)
-                    try:
-                        p_date = pd.to_datetime(date_raw).date()
-                        if p_date < today:
-                            continue
-                        
-                        uod_val = ""
-                        focus_val = ""
-                        row_cells = [str(c).strip() for c in row.dropna() if str(c).strip() != date_raw]
-                        
-                        # Inspect all row cells for exact uniform indicators
-                        for cell_text in row_cells:
-                            c_lower = cell_text.lower()
-                            if "uod:" in c_lower or "uniform" in c_lower or "ugly sweater" in c_lower:
-                                uod_val = cell_text.replace("UOD:", "").strip()
-                            elif any(kw in c_lower for kw in ["blues", "class b", "class a", "civilian", "ptu", "pt uniform"]):
-                                uod_val = cell_text.strip()
-                            elif not focus_val and not any(kw in c_lower for kw in ["time", "meeting", "location"]):
-                                focus_val = cell_text
-
-                        # Fallback UOD detection based on week/text if sheet cell was empty
-                        if not uod_val:
-                            if "blues" in row_str.lower() or "class b" in row_str.lower():
-                                uod_val = "Blues (Class B)"
-                            elif "civilian" in row_str.lower():
-                                uod_val = "Civilian / Activity"
-                            else:
-                                uod_val = "Utility Uniform (ABU/OCP)"
-
-                        parsed_meetings.append({
-                            "Meeting Date": p_date.strftime("%d-%b-%Y"),
-                            "Date Obj": p_date,
-                            "UOD": uod_val,
-                            "Focus": focus_val if focus_val else "Standard Meeting"
-                        })
-                    except Exception:
-                        pass
-        except Exception:
-            continue
-
-    if len(parsed_meetings) > 3:
-        df = pd.DataFrame(parsed_meetings).drop_duplicates(subset=["Meeting Date"]).sort_values("Date Obj")
-        condensed = []
-        for idx, row in df.iterrows():
-            dt = row["Date Obj"]
-            f_lower = str(row["Focus"]).lower()
-            is_cpft = is_4th_wednesday(dt) or "cpft" in f_lower
-            is_halloween = (dt.month == 10 and dt.day == 28) or "halloween" in f_lower
-            is_holiday_party = (dt.month == 12 and dt.day == 16) or "party" in f_lower
-            is_xmas_break = (dt.month == 12 and dt.day in [23, 30])
-            is_thanksgiving_break = (dt.month == 11 and dt.day >= 24)
-            is_5th = dt.day >= 29
-            is_break = is_xmas_break or is_thanksgiving_break or any(kw in f_lower for kw in ["break", "holiday", "canceled"])
-            is_party = is_halloween or is_holiday_party or any(kw in f_lower for kw in ["social", "banquet"])
-
-            uod_final = row["UOD"]
-            cpft_flag = "✅ Yes" if is_cpft else "No"
-
-            if is_xmas_break or is_thanksgiving_break:
-                uod_final = "Civilian / N/A"
-                notes = "🚫 No Meeting — Holiday Break"
-            elif is_holiday_party:
-                uod_final = "Ugly Sweaters / Civilian"
-                notes = "🎄 Holiday Party — No Requests Permitted"
-            elif is_party:
-                notes = f"🎃 {row['Focus']} — No Requests Permitted" if is_halloween else f"⚠️ No Requests — Social ({row['Focus']})"
-            elif is_5th:
-                notes = "⚠️ No Requests — 5th Wednesday Event"
-            elif is_break:
-                notes = f"🚫 No Meeting — {row['Focus']}"
-            else:
-                notes = "CPFT Testing Night (Arrive in PTs, change to Utility)" if is_cpft else "Standard Requests Allowed"
-
-            condensed.append({
-                "Meeting Date": row["Meeting Date"],
-                "UOD": uod_final,
-                "4th Wed CPFT": cpft_flag,
-                "Status & Notes": notes
-            })
-        return pd.DataFrame(condensed)
-
     return generate_wednesdays_through_dec(today)
 
 # ---------------------------------------------------------
