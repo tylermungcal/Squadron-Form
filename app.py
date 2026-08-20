@@ -449,7 +449,6 @@ with tab_progress:
 @st.cache_data(ttl=300)
 def load_schedule():
     sheet_id = "17wdWuOFBFyR507_vBITsTkI8il7k-1gDjLLPtNcCzt8"
-    # Mapping GIDs for Aug - Dec 2026 tabs
     tabs_gids = [
         ("AUG 26", "420770302"),
         ("SEP 26", "1383777558"),
@@ -468,16 +467,16 @@ def load_schedule():
             for i, row in raw_df.iterrows():
                 row_str = " ".join(row.dropna().astype(str))
                 
-                # Filter out Foxhunts
+                # Ignore Foxhunts
                 if "foxhunt" in row_str.lower():
                     continue
 
-                # Match date patterns (e.g., 26-August-2026 or 02-Sep-26)
+                # Find date entries
                 match = re.search(r"(\d{1,2}-(?:\w+|\d{1,2})-\d{2,4})", row_str, re.IGNORECASE)
                 if match:
                     date_raw = match.group(1)
                     
-                    # Parse date to filter out past meetings
+                    # Ignore past meetings
                     try:
                         parsed_date = pd.to_datetime(date_raw).date()
                         if parsed_date < today:
@@ -506,7 +505,7 @@ def load_schedule():
     if parsed_meetings:
         return pd.DataFrame(parsed_meetings)
 
-    # Fallback upcoming schedule if GID export fails
+    # Clean Fallback Data
     return pd.DataFrame([
         {"Meeting Date": "26-August-2026", "UOD": "PT Uniform", "Focus": "CPFT / Testing"},
         {"Meeting Date": "02-September-2026", "UOD": "Utility Uniform (ABU/OCP)", "Focus": "Emergency Services (ES) Ground Handling"},
@@ -536,7 +535,7 @@ with tab_sched:
             focus_lower = focus_val.lower()
             uod_lower = uod_val.lower()
 
-            # Identify Training Category (ES, Character Development, Aerospace, PT)
+            # Categorize Training Focus
             if any(kw in focus_lower for kw in ["es", "emergency services", "ground team", "sartopo", "first aid"]):
                 category = "Emergency Services (ES)"
             elif any(kw in focus_lower for kw in ["character", "moral", "core values", "cd"]):
@@ -548,11 +547,11 @@ with tab_sched:
             else:
                 category = "Leadership / General"
 
-            # Detect 4th Wednesday / CPFT
+            # CPFT Night Check
             is_cpft = "cpft" in focus_lower or "pt" in uod_lower or "4th" in date_lower
             cpft_status = "✅ Yes" if is_cpft else "No"
 
-            # Check for 5th Wednesdays, Parties, or Breaks
+            # 5th Wednesday / Party / Break Exception Checking
             is_5th_wed = "5th" in date_lower or "5th" in focus_lower
             is_party = any(kw in focus_lower for kw in ["party", "social", "banquet", "potluck"])
             is_break = any(kw in focus_lower for kw in ["break", "holiday", "no meeting", "canceled", "cancelled", "thanksgiving", "christmas"])
@@ -578,8 +577,3 @@ with tab_sched:
         st.dataframe(display_schedule_df, use_container_width=True, hide_index=True)
     else:
         st.info("No upcoming meeting schedule data available.")
-
-        display_schedule_df = pd.DataFrame(condensed_schedule)
-        st.dataframe(display_schedule_df, use_container_width=True, hide_index=True)
-    else:
-        st.info("No schedule data available.")
