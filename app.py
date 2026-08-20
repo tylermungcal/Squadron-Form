@@ -87,16 +87,16 @@ def load_cadet_progress():
     except Exception:
         return pd.DataFrame()
 
-@st.cache_data(ttl=15)
+@st.cache_data(ttl=60)
 def load_submitted_backend():
-    sheet_id = "1aWN5BSWlMHYwBzrmijnlBEhP4ZEU9sJjx3VLIxqHnTE"
-    gid = "0"
-    url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
+    # Updated URL with the exact tab gid
+    url = "https://docs.google.com/spreadsheets/d/1aWN5BSWlMHYwBzrmijnlBEhP4ZEU9sJjx3VLIxqHnTE/export?format=csv&gid=0"
     try:
         df = pd.read_csv(url)
-        df.columns = [str(c).strip() for c in df.columns]
+        df.columns = df.columns.str.strip()
         return df
-    except Exception:
+    except Exception as e:
+        st.error(f"Error loading backend: {e}")
         return pd.DataFrame()
 
 progress_df = load_cadet_progress()
