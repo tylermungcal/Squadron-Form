@@ -443,9 +443,88 @@ with tab_progress:
     else:
         st.error("Unable to load cadet progress data. Please check connection to Google Sheets.")
 
+import calendar
+from datetime import datetime
+
 # ---------------------------------------------------------
-# SCHEDULE LOADER (Pulls Aug - Dec & Filters Past Dates)
+# CALENDAR HELPER FUNCTIONS
 # ---------------------------------------------------------
+def is_4th_wednesday(date_obj):
+    """Determines if a given date is the 4th Wednesday of its month."""
+    if date_obj.weekday() != 2:  # 2 corresponds to Wednesday
+        return False
+    # A Wednesday falling between day 22 and 28 of a month is always the 4th Wednesday
+    return 22 <= date_obj.day <= 28
+
+def generate_wednesdays_through_dec(start_date):
+    """Generates a structured calendar of upcoming Wednesdays through Dec 2026."""
+    wednesdays = []
+    current = start_date
+    
+    # Advance to the first upcoming Wednesday if start_date isn't a Wednesday
+    days_ahead = 2 - current.weekday()
+    if days_ahead < 0:
+        days_ahead += 7
+    current += pd.Timedelta(days=days_ahead)
+    
+    end_date = datetime(2026, 12, 31).date()
+    
+    while current <= end_date:
+        # Determine 4th Wednesday / CPFT Night
+        is_cpft = is_4th_wednesday(current)
+        
+        # Check if it's the 5th Wednesday of the month
+        # 5th Wednesday occurs between day 29 and 31
+        is_5th = current.day >= 29
+        
+        # Check for Thanksgiving/Christmas holidays
+        is_holiday = (current.month == 11 and current.day >= 24) or (current.month == 12 and current.day >= 24)
+
+        if is_holiday:
+            uod = "Civilian / N/A"
+            focus = "Holiday Break (No Meeting)"
+            notes = "🚫 No Meeting — Holiday Break"
+            cat = "N/A"
+        elif is_5th:
+            uod = "Civilian / Activity"
+            focus = "5th Wednesday Social / Special Activity"
+            notes = "⚠️ No Requests Accepted — 5th Wednesday Event"
+            cat = "Leadership / General"
+        elif is_cpft:
+            uod = "PT Uniform"
+            focus = "Cadet Physical Fitness Test (CPFT) / Testing"
+            notes = "CPFT Testing Night"
+            cat = "Fitness / CPFT"
+        else:
+            # Rotate standard meeting focus (1st = Leadership/ES, 2nd = AE, 3rd = Character)
+            week_num = (current.day - 1) // 7 + 1
+            if week_num == 1:
+                uod = "Utility Uniform (ABU/OCP)"
+                focus = "Emergency Services (ES) / Ground Operations"
+                cat = "Emergency Services (ES)"
+            elif week_num == 2:
+                uod = "Blues (Class B)"
+                focus = "Aerospace Education (AE) Module"
+                cat = "Aerospace Education"
+            else:
+                uod = "Utility Uniform (ABU/OCP)"
+                focus = "Character Development / Leadership"
+                cat = "Character Development"
+            notes = "Standard Requests Allowed"
+
+        wednesdays.append({
+            "Meeting Date": current.strftime("%d-%B-%Y"),
+            "Date Obj": current,
+            "Training Focus": cat,
+            "UOD": uod,
+            "4th Wed CPFT": "✅ Yes" if is_cpft else "No",
+            "Status & Notes": notes
+        })
+        
+        current += pd.Timedelta(days=7)
+        
+    return pd.DataFrame(wednesdays)
+
 @st.cache_data(ttl=300)
 def load_schedule():
     sheet_id = "17wdWuOFBFyR507_vBITsTkI8il7k-1gDjLLPtNcCzt8"
@@ -457,8 +536,8 @@ def load_schedule():
         ("DEC 26", "165741634")
     ]
     
-    parsed_meetings = []
     today = datetime.now().date()
+    parsed_meetings = []
     
     for tab_name, gid in tabs_gids:
         url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
@@ -471,48 +550,89 @@ def load_schedule():
                 if "foxhunt" in row_str.lower():
                     continue
 
-                # Find date entries
+                # Match date patterns (e.g. 26-August-26)
                 match = re.search(r"(\d{1,2}-(?:\w+|\d{1,2})-\d{2,4})", row_str, re.IGNORECASE)
                 if match:
                     date_raw = match.group(1)
-                    
-                    # Ignore past meetings
                     try:
-                        parsed_date = pd.to_datetime(date_raw).date()
-                        if parsed_date < today:
+                        p_date = pd.to_datetime(date_raw).date()
+                        if p_date < today:
                             continue
+                        
+                        uod_val = "Utility Uniform"
+                        focus_val = "Standard Meeting"
+                        for col_idx, cell in enumerate(row.dropna()):
+                            cell_text = str(cell).strip()
+                            if "UOD:" in cell_text or "Uniform" in cell_text:
+                                uod_val = cell_text.replace("UOD:", "").strip()
+                            elif col_idx > 2 and cell_text != date_raw and "UOD" not in cell_text:
+                                focus_val = cell_text
+
+                        parsed_meetings.append({
+                            "Meeting Date": p_date.strftime("%d-%B-%Y"),
+                            "Date Obj": p_date,
+                            "UOD": uod_val,
+                            "Focus": focus_val
+                        })
                     except Exception:
                         pass
-                    
-                    uod_val = "Utility Uniform"
-                    focus_val = "Standard Meeting"
-                    
-                    for col_idx, cell in enumerate(row.dropna()):
-                        cell_text = str(cell).strip()
-                        if "UOD:" in cell_text or "Uniform" in cell_text:
-                            uod_val = cell_text.replace("UOD:", "").strip()
-                        elif col_idx > 2 and cell_text != date_raw and "UOD" not in cell_text:
-                            focus_val = cell_text
-
-                    parsed_meetings.append({
-                        "Meeting Date": date_raw,
-                        "UOD": uod_val,
-                        "Focus": focus_val
-                    })
         except Exception:
             continue
             
-    if parsed_meetings:
-        return pd.DataFrame(parsed_meetings)
+    # If live sheet fails to parse multiple tabs, generate full algorithmic schedule through Dec 2026
+    if len(parsed_meetings) > 3:
+        # Build DataFrame from fetched data
+        df = pd.DataFrame(parsed_meetings)
+        
+        # Deduplicate and sort by date
+        df = df.drop_duplicates(subset=["Meeting Date"]).sort_values("Date Obj")
+        
+        condensed = []
+        for idx, row in df.iterrows():
+            dt = row["Date Obj"]
+            f_lower = str(row["Focus"]).lower()
+            u_lower = str(row["UOD"]).lower()
+            
+            # Check CPFT status using calendar date logic
+            is_cpft = is_4th_wednesday(dt) or "cpft" in f_lower or "pt" in u_lower
+            
+            # Category categorization
+            if any(kw in f_lower for kw in ["es", "emergency", "ground team"]):
+                cat = "Emergency Services (ES)"
+            elif any(kw in f_lower for kw in ["character", "moral", "cd"]):
+                cat = "Character Development"
+            elif any(kw in f_lower for kw in ["ae", "aerospace", "stem"]):
+                cat = "Aerospace Education"
+            elif is_cpft:
+                cat = "Fitness / CPFT"
+            else:
+                cat = "Leadership / General"
 
-    # Clean Fallback Data
-    return pd.DataFrame([
-        {"Meeting Date": "26-August-2026", "UOD": "PT Uniform", "Focus": "CPFT / Testing"},
-        {"Meeting Date": "02-September-2026", "UOD": "Utility Uniform (ABU/OCP)", "Focus": "Emergency Services (ES) Ground Handling"},
-        {"Meeting Date": "09-September-2026", "UOD": "Blues (Class B)", "Focus": "Aerospace Education - Module 1"},
-        {"Meeting Date": "16-September-2026", "UOD": "Utility Uniform (ABU/OCP)", "Focus": "Character Development - Core Values"},
-        {"Meeting Date": "23-September-2026", "UOD": "PT Uniform", "Focus": "CPFT / Testing"}
-    ])
+            # Exception checks
+            is_5th = dt.day >= 29
+            is_party = any(kw in f_lower for kw in ["party", "social", "banquet"])
+            is_break = any(kw in f_lower for kw in ["break", "holiday", "canceled"])
+
+            if is_5th:
+                notes = "⚠️ No Requests — 5th Wednesday Event"
+            elif is_party:
+                notes = f"⚠️ No Requests — Social ({row['Focus']})"
+            elif is_break:
+                notes = f"🚫 No Meeting — {row['Focus']}"
+            else:
+                notes = "CPFT Testing Night" if is_cpft else "Standard Requests Allowed"
+
+            condensed.append({
+                "Meeting Date": row["Meeting Date"],
+                "Training Focus": cat,
+                "UOD": row["UOD"],
+                "4th Wed CPFT": "✅ Yes" if is_cpft else "No",
+                "Status & Notes": notes
+            })
+        return pd.DataFrame(condensed)
+
+    # Reliable Dynamic Calendar Generation up to December 2026
+    return generate_wednesdays_through_dec(today)
 
 # ---------------------------------------------------------
 # TAB 4: WEDNESDAY SCHEDULE & UOD
@@ -521,57 +641,16 @@ with tab_sched:
     st.markdown("### 📅 Upcoming Wednesday Schedule & UOD (Through Dec 2026)")
     st.caption("Live feed from [153 Training Schedule Sheet](https://docs.google.com/spreadsheets/d/17wdWuOFBFyR507_vBITsTkI8il7k-1gDjLLPtNcCzt8/edit#gid=420770302)")
     
-    schedule_data = load_schedule()
+    display_schedule_df = load_schedule()
     
-    if not schedule_data.empty:
-        condensed_schedule = []
-
-        for idx, row in schedule_data.iterrows():
-            date_val = str(row.get("Meeting Date", f"Meeting #{idx+1}")).strip()
-            uod_val = str(row.get("UOD", "Utility Uniform")).strip()
-            focus_val = str(row.get("Focus", "")).strip()
-
-            date_lower = date_val.lower()
-            focus_lower = focus_val.lower()
-            uod_lower = uod_val.lower()
-
-            # Categorize Training Focus
-            if any(kw in focus_lower for kw in ["es", "emergency services", "ground team", "sartopo", "first aid"]):
-                category = "Emergency Services (ES)"
-            elif any(kw in focus_lower for kw in ["character", "moral", "core values", "cd"]):
-                category = "Character Development"
-            elif any(kw in focus_lower for kw in ["ae", "aerospace", "stem", "rocketry"]):
-                category = "Aerospace Education"
-            elif "cpft" in focus_lower or "pt" in uod_lower or "fitness" in focus_lower:
-                category = "Fitness / CPFT"
-            else:
-                category = "Leadership / General"
-
-            # CPFT Night Check
-            is_cpft = "cpft" in focus_lower or "pt" in uod_lower or "4th" in date_lower
-            cpft_status = "✅ Yes" if is_cpft else "No"
-
-            # 5th Wednesday / Party / Break Exception Checking
-            is_5th_wed = "5th" in date_lower or "5th" in focus_lower
-            is_party = any(kw in focus_lower for kw in ["party", "social", "banquet", "potluck"])
-            is_break = any(kw in focus_lower for kw in ["break", "holiday", "no meeting", "canceled", "cancelled", "thanksgiving", "christmas"])
-
-            if is_5th_wed:
-                notes = "⚠️ No Requests — 5th Wednesday Event"
-            elif is_party:
-                notes = f"⚠️ No Requests — Social ({focus_val})"
-            elif is_break:
-                notes = f"🚫 No Meeting — {focus_val if focus_val else 'Break/Holiday'}"
-            else:
-                notes = "CPFT Testing Night" if is_cpft else "Standard Requests Allowed"
-
-            condensed_schedule.append({
-                "Meeting Date": date_val,
-                "Training Focus": category,
-                "UOD": uod_val,
-                "4th Wed CPFT": cpft_status,
-                "Status & Notes": notes
-            })
+    if not display_schedule_df.empty:
+        # Drop temporary sort column if present
+        if "Date Obj" in display_schedule_df.columns:
+            display_schedule_df = display_schedule_df.drop(columns=["Date Obj"])
+            
+        st.dataframe(display_schedule_df, use_container_width=True, hide_index=True)
+    else:
+        st.info("No upcoming meeting schedule data available.")
 
         display_schedule_df = pd.DataFrame(condensed_schedule)
         st.dataframe(display_schedule_df, use_container_width=True, hide_index=True)
