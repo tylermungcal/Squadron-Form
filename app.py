@@ -17,42 +17,14 @@ st.set_page_config(page_title="Squadron 153 Request Portal", page_icon="✈️",
 
 st.markdown("""
     <style>
-    .stApp {
-        background-color: #002244;
-        color: #FFFFFF;
-    }
-    .main-header {
-        background-color: #001122;
-        padding: 1.5rem;
-        border-radius: 10px;
-        text-align: center;
-        border: 2px solid #003366;
-        margin-bottom: 2rem;
-    }
-    .main-header h1 { color: #FFFFFF !important; font-weight: 800; margin: 0; }
-    .main-header h3 { color: #FFCC00 !important; margin-top: 5px; }
-    
-    label, .stMarkdown, p, span, h1, h2, h3, h4, h5, h6 {
-        color: #FFFFFF !important;
-    }
-    
-    .stTextInput input, .stSelectbox div[data-baseweb="select"], .stTextArea textarea, .stDateInput input {
-        background-color: #001122 !important;
-        color: #FFFFFF !important;
-        border: 1px solid #003366 !important;
-    }
-    
-    .stButton>button {
-        background-color: #003366 !important;
-        color: #FFCC00 !important;
-        font-weight: bold !important;
-        border: 1px solid #FFCC00 !important;
-        width: 100%;
-    }
-    .stButton>button:hover {
-        background-color: #FFCC00 !important;
-        color: #002244 !important;
-    }
+    .stApp {background-color: #002244; color: #FFFFFF;}
+    .main-header {background-color: #001122; padding: 1.5rem; border-radius: 10px; text-align: center; border: 2px solid #003366; margin-bottom: 2rem;}
+    .main-header h1 { color: #FFFFFF !important; font-weight: 800; margin: 0;}
+    .main-header h3 { color: #FFCC00 !important; margin-top: 5px;}
+    label, .stMarkdown, p, span, h1, h2, h3, h4, h5, h6 {color: #FFFFFF !important;}
+    .stTextInput input, .stSelectbox div[data-baseweb="select"], .stTextArea textarea, .stDateInput input {background-color: #001122 !important; color: #FFFFFF !important; border: 1px solid #003366 !important;}
+    .stButton>button {background-color: #003366 !important; color: #FFCC00 !important; font-weight: bold !important; border: 1px solid #FFCC00 !important; width: 100%;}
+    .stButton>button:hover {background-color: #FFCC00 !important; color: #002244 !important;}
     </style>
 """, unsafe_allow_html=True)
 
@@ -141,14 +113,11 @@ def is_4th_wednesday(date_obj):
 def generate_wednesdays_through_dec(start_date):
     wednesdays = []
     current = start_date
-    
     days_ahead = 2 - current.weekday()
     if days_ahead < 0:
         days_ahead += 7
     current += pd.Timedelta(days=days_ahead)
-    
     end_date = datetime(2026, 12, 31).date()
-    
     while current <= end_date:
         is_cpft = is_4th_wednesday(current)
         is_5th = current.day >= 29
@@ -204,7 +173,6 @@ def generate_wednesdays_through_dec(start_date):
             "Status & Notes": notes
         })
         current += pd.Timedelta(days=7)
-        
     return pd.DataFrame(wednesdays)
 
 @st.cache_data(ttl=300)
@@ -218,9 +186,7 @@ def load_schedule():
         ("NOV 26", "1905667352"),
         ("DEC 26", "165741634")
     ]
-    
     parsed_meetings = []
-    
     for tab_name, gid in tabs_gids:
         url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
         try:
@@ -229,7 +195,6 @@ def load_schedule():
                 row_str = " ".join(row.dropna().astype(str))
                 if "foxhunt" in row_str.lower():
                     continue
-
                 match = re.search(r"(\d{1,2}-(?:\w+|\d{1,2})-\d{2,4})", row_str, re.IGNORECASE)
                 if match:
                     date_raw = match.group(1)
@@ -237,7 +202,6 @@ def load_schedule():
                         p_date = pd.to_datetime(date_raw).date()
                         if p_date < today:
                             continue
-                        
                         uod_val = "Utility Uniform (ABU/OCP)"
                         focus_val = "Standard Meeting"
                         for col_idx, cell in enumerate(row.dropna()):
@@ -246,7 +210,6 @@ def load_schedule():
                                 uod_val = cell_text.replace("UOD:", "").strip()
                             elif col_idx > 2 and cell_text != date_raw and "UOD" not in cell_text:
                                 focus_val = cell_text
-
                         parsed_meetings.append({
                             "Meeting Date": p_date.strftime("%d-%b-%Y"),
                             "Date Obj": p_date,
@@ -257,14 +220,13 @@ def load_schedule():
                         pass
         except Exception:
             continue
-            
+
     if len(parsed_meetings) > 3:
         df = pd.DataFrame(parsed_meetings).drop_duplicates(subset=["Meeting Date"]).sort_values("Date Obj")
         condensed = []
         for idx, row in df.iterrows():
             dt = row["Date Obj"]
             f_lower = str(row["Focus"]).lower()
-            
             is_cpft = is_4th_wednesday(dt) or "cpft" in f_lower
             is_halloween = (dt.month == 10 and dt.day == 28) or "halloween" in f_lower
             is_holiday_party = (dt.month == 12 and dt.day == 16) or "party" in f_lower
@@ -300,7 +262,6 @@ def load_schedule():
 
                 is_5th = dt.day >= 29
                 is_break = any(kw in f_lower for kw in ["break", "holiday", "canceled"])
-
                 uod_final = "Utility Uniform (ABU/OCP)" if is_cpft else row["UOD"]
                 cpft_flag = "✅ Yes" if is_cpft else "No"
 
@@ -409,7 +370,7 @@ def calculate_submission_deadline(target_wed_date):
 # ---------------------------------------------------------
 tab_req, tab_dashboard, tab_progress, tab_sched = st.tabs([
     "📝 Submit Request", 
-    "📈 Live Request Dashboard",
+    "📈 Live Request Dashboard", 
     "📊 Cadet Progress Report", 
     "📅 Wednesday Schedule & UOD"
 ])
@@ -419,15 +380,18 @@ tab_req, tab_dashboard, tab_progress, tab_sched = st.tabs([
 # ---------------------------------------------------------
 with tab_req:
     st.markdown("### Cadet Request Form")
-    
+
+    # Folder IDs
+    PRIMARY_FOLDER_ID = st.secrets.get("DRIVE_FOLDER_ID", "12Z89jcG91dlFk19bpU5acPhSdiL-kK2z")
+    PROOF_FOLDER_ID = "1m1gy0TRXXQ4gUMgm_Jj31ilUpIBoOEQE"  # eServices Screenshot Folder
+
     if not progress_df.empty and "Cadet Name" in progress_df.columns:
         cadet_names = sorted([n for n in progress_df["Cadet Name"].dropna().unique() if str(n).strip()])
         selected_cadet = st.selectbox("Select Your Name:*", ["-- Select Name --"] + cadet_names)
-        
+
         if selected_cadet != "-- Select Name --":
             cadet_row = progress_df[progress_df["Cadet Name"] == selected_cadet].iloc[0]
             working_ach = str(cadet_row.get("Working Towards Achievement No.", "N/A"))
-            
             raw_cap_id = str(cadet_row.get("CAP ID", "")).replace(".0", "").strip()
             inferred_email = str(cadet_row.get("Email", cadet_row.get("Cadet Email", ""))).strip()
             inferred_grade = infer_current_grade(working_ach)
@@ -447,11 +411,11 @@ with tab_req:
             all_request_types = [
                 "-- Select Request Type --",
                 "4th Wednesday CPFT",
-                "Drill Test", 
-                "PRB", 
-                "Milestone Exam", 
-                "Technical Writing Submission (SDA)", 
-                "Essay Submission", 
+                "Drill Test",
+                "PRB",
+                "Milestone Exam",
+                "Technical Writing Submission (SDA)",
+                "Essay Submission",
                 "Specialty Exam"
             ]
 
@@ -463,7 +427,7 @@ with tab_req:
                 available_types = all_request_types
 
             req_type = st.selectbox("Request Type:*", available_types)
-            
+
             if req_type == "-- Select Request Type --":
                 st.info("💡 Please select a **Request Type** above to continue.")
             else:
@@ -471,10 +435,10 @@ with tab_req:
                 if req_type == "Milestone Exam":
                     detected_exam = detect_milestone_exam(working_ach)
                     exam_options = [
-                        "Wright Brothers Award Exam", 
-                        "Billy Mitchell Award Exam", 
-                        "Amelia Earhart Award Exam", 
-                        "Ira C. Eaker Award Exam", 
+                        "Wright Brothers Award Exam",
+                        "Billy Mitchell Award Exam",
+                        "Amelia Earhart Award Exam",
+                        "Ira C. Eaker Award Exam",
                         "General Carl A. Spaatz Award Exam"
                     ]
                     default_idx = exam_options.index(detected_exam) if detected_exam in exam_options else 0
@@ -482,7 +446,7 @@ with tab_req:
 
                 lead_val = str(cadet_row.get("Leadership", "")).strip()
                 ae_val = str(cadet_row.get("Aerospace (AE) No. Completed", "0")).strip()
-                
+
                 prereq_valid = True
                 error_msgs = []
 
@@ -496,7 +460,6 @@ with tab_req:
                     error_msgs.append("Please enter a valid **email address**.")
 
                 eservices_proof_file = None
-                
                 if req_type != "4th Wednesday CPFT":
                     manual_override = st.checkbox("I have completed my prerequisites, but the Cadet Progress report is displaying incorrect info.")
                     if manual_override:
@@ -510,7 +473,6 @@ with tab_req:
                             if not lead_val or lead_val in ["None", "nan"] or ae_val in ["0", "None", "nan", ""]:
                                 prereq_valid = False
                                 error_msgs.append("To request a **Drill Test**, you must have completed **Learn to Lead** and **AE Dimensions**.")
-                        
                         elif req_type in ["Technical Writing Submission (SDA)", "Essay Submission"]:
                             if not lead_val or lead_val in ["None", "nan"] or ae_val in ["0", "None", "nan", ""]:
                                 prereq_valid = False
@@ -530,7 +492,7 @@ with tab_req:
                 deadline_dt = calculate_submission_deadline(target_date)
                 now = datetime.now()
                 st.caption(f"🕒 **Submission Deadline for {target_date.strftime('%d-%b-%Y')}:** {deadline_dt.strftime('%A, %b %d, %Y at 23:59')}")
-                
+
                 if now > deadline_dt:
                     prereq_valid = False
                     error_msgs.append(f"The deadline for requesting **{target_date.strftime('%d-%b-%Y')}** passed on **{deadline_dt.strftime('%b %d at 23:59')}** (Thursday of the week prior).")
@@ -539,7 +501,7 @@ with tab_req:
                 is_holiday_party = (target_date.month == 12 and target_date.day == 16)
                 is_xmas_break = (target_date.month == 12 and target_date.day in [23, 30])
                 is_5th_wed = (target_date.weekday() == 2 and target_date.day >= 29)
-                
+
                 if is_halloween_date or is_holiday_party or is_xmas_break or is_5th_wed:
                     prereq_valid = False
                     error_msgs.append("No requests are permitted on **Party or Holiday Break dates** (e.g., Halloween Party / Holiday Party / Xmas Break / 5th Wednesday).")
@@ -548,13 +510,10 @@ with tab_req:
                     if "Achievement 4" in working_ach or any(f"Achievement {i}" in working_ach for i in range(5, 17)):
                         st.warning("⚠️ **Reminder:** PRB Requests for Achievement 4+ must take place on a **Blues Night**.")
 
-                # ---------------------------------------------------------
-                # REQUIRED UPLOAD LOGIC FOR SDA / ESSAY / PRB / EAKER / SPAATZ
-                # ---------------------------------------------------------
                 is_upload_required = req_type in ["Technical Writing Submission (SDA)", "Essay Submission", "PRB"] or (
                     req_type == "Milestone Exam" and selected_exam_name in ["Ira C. Eaker Award Exam", "General Carl A. Spaatz Award Exam"]
                 )
-
+                
                 no_upload_needed = req_type in ["Drill Test", "4th Wednesday CPFT"] or (
                     req_type == "Milestone Exam" and selected_exam_name not in ["Ira C. Eaker Award Exam", "General Carl A. Spaatz Award Exam"]
                 )
@@ -594,177 +553,73 @@ with tab_req:
                         else:
                             file_link = ""
                             proof_link = ""
-                            folder_id = st.secrets.get("DRIVE_FOLDER_ID", "12Z89jcG91dlFk19bpU5acPhSdiL-kK2z")
-                            
+
                             with st.spinner("Processing request and uploading files..."):
                                 if uploaded_file is not None:
-                                    file_link = upload_file_to_drive(uploaded_file, folder_id) or ""
-                                if eservices_proof_file is not None:
-                                    proof_link = upload_file_to_drive(eservices_proof_file, folder_id) or ""
+                                    file_link = upload_file_to_drive(uploaded_file, PRIMARY_FOLDER_ID) or ""
 
-                                apps_script_url = st.secrets.get("APPS_SCRIPT_URL", "")
-                                
+                                if eservices_proof_file is not None:
+                                    proof_link = upload_file_to_drive(eservices_proof_file, PROOF_FOLDER_ID) or ""
+
+                                webhook_url = st.secrets.get("WEBHOOK_URL", "https://script.google.com/macros/s/AKfycbz_Placeholder/exec")
                                 payload = {
                                     "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                                     "cadet_name": selected_cadet,
-                                    "email": email_input.strip(),
+                                    "email": email_input,
                                     "cap_id": clean_cap_id,
                                     "grade": grade_input,
                                     "flight": flight_input,
                                     "request_type": req_type,
                                     "milestone_exam": selected_exam_name if req_type == "Milestone Exam" else "",
-                                    "target_date": target_date.strftime("%Y-%m-%d"),
+                                    "target_date": target_date.strftime("%d-%b-%Y"),
                                     "uploaded_file_url": file_link,
                                     "proof_file_url": proof_link,
+                                    "status": "Pending",
                                     "comments": comments
                                 }
 
-                                if apps_script_url:
-                                    try:
-                                        res = requests.post(apps_script_url, json=payload, timeout=10)
-                                        if res.status_code == 200:
-                                            st.success(f"Request for **{req_type}** successfully submitted for {selected_cadet}!")
-                                        else:
-                                            st.warning("Form processed, but unable to write to backend Google Sheet. Please inform staff.")
-                                    except Exception:
-                                        st.warning("Form submitted locally, but backend webhook connection failed.")
-                                else:
-                                    st.success(f"Request for **{req_type}** submitted successfully!")
-
-                            if file_link:
-                                st.markdown(f"📄 **Uploaded Document:** [View in Drive]({file_link})")
-                            if proof_link:
-                                st.markdown(f"📸 **eServices Prerequisite Proof:** [View Screenshot in Drive]({proof_link})")
-    else:
-        st.warning("Unable to fetch Cadet Progress data.")
+                                try:
+                                    res = requests.post(webhook_url, json=payload)
+                                    st.success(f"Request for **{req_type}** successfully submitted for **{selected_cadet}**!")
+                                    st.balloons()
+                                except Exception as e:
+                                    st.error(f"Error posting submission to backend: {e}")
 
 # ---------------------------------------------------------
-# TAB 2: LIVE REQUEST DASHBOARD & EDITING
+# TAB 2: LIVE REQUEST DASHBOARD
 # ---------------------------------------------------------
 with tab_dashboard:
-    st.markdown("### 📈 Live Submitted Requests Dashboard")
-    
-    dash_password = st.text_input("🔒 Enter Staff Access Password:", type="password")
-    
-    if dash_password == "1530":
-        st.success("Access Granted — Editable Dashboard Enabled")
-        
-        if not backend_df.empty:
-            st.markdown("✏️ *You can edit **Status** and **Comments** below. Click **Save Changes** to sync updates to Google Sheets.*")
-            
-            edited_df = st.data_editor(
-                backend_df,
-                use_container_width=True,
-                hide_index=True,
-                column_config={
-                    "Status": st.column_config.SelectboxColumn(
-                        "Status",
-                        help="Update status of request",
-                        options=["Pending", "Approved", "In Review", "Completed", "Denied"],
-                        required=True,
-                    ),
-                    "Uploaded File URL": st.column_config.LinkColumn("Uploaded File"),
-                    "Proof File URL": st.column_config.LinkColumn("Proof Screenshot"),
-                },
-                disabled=[c for c in backend_df.columns if c not in ["Status", "Comments", "data.comments", "data.status"]]
-            )
-            
-            if st.button("💾 Save Changes to Google Sheets"):
-                apps_script_url = st.secrets.get("APPS_SCRIPT_URL", "")
-                if apps_script_url:
-                    updated_count = 0
-                    for idx, row in edited_df.iterrows():
-                        orig_row = backend_df.iloc[idx]
-                        status_col = "Status" if "Status" in edited_df.columns else edited_df.columns[-1]
-                        comments_col = "Comments" if "Comments" in edited_df.columns else edited_df.columns[-2]
-                        
-                        if row[status_col] != orig_row[status_col] or row[comments_col] != orig_row[comments_col]:
-                            payload = {
-                                "action": "update_status",
-                                "timestamp": str(row[edited_df.columns[0]]),
-                                "cap_id": str(row["CAP ID"] if "CAP ID" in edited_df.columns else row[edited_df.columns[3]]),
-                                "status": str(row[status_col]),
-                                "comments": str(row[comments_col])
-                            }
-                            try:
-                                res = requests.post(apps_script_url, json=payload, timeout=10)
-                                if res.status_code == 200:
-                                    updated_count += 1
-                            except Exception:
-                                pass
-                    st.success(f"Successfully updated {updated_count} record(s) in Google Sheets!")
-                    st.cache_data.clear()
-                else:
-                    st.error("Apps Script URL not configured in secrets.")
-        else:
-            st.info("No request records currently logged.")
-    elif dash_password:
-        st.error("Incorrect password. Please enter valid staff credentials.")
+    st.markdown("### Live Request Status Dashboard")
+    if not backend_df.empty:
+        st.dataframe(backend_df, use_container_width=True)
     else:
-        st.info("Password required to view live request dashboard.")
+        st.info("No requests currently recorded.")
 
 # ---------------------------------------------------------
-# TAB 3: CADET PROGRESS REPORT INTEGRATION
+# TAB 3: CADET PROGRESS REPORT
 # ---------------------------------------------------------
 with tab_progress:
-    st.markdown("### 📊 Cadet Progress Lookup")
-    
+    st.markdown("### Cadet Progress Overview")
     if not progress_df.empty:
-        search_query = st.text_input("🔍 Search by Cadet Name or CAP ID:", placeholder="Type a name (e.g., 'Smith') or CAP ID...").strip()
-
-        if search_query:
-            query_str = str(search_query).lower()
-            name_match = progress_df["Cadet Name"].astype(str).str.lower().str.contains(query_str, na=False)
-            
-            capid_col = "CAP ID" if "CAP ID" in progress_df.columns else progress_df.columns[0]
-            capid_match = progress_df[capid_col].astype(str).str.contains(query_str, na=False)
-
-            filtered_df = progress_df[name_match | capid_match].copy()
-
-            if not filtered_df.empty:
-                def format_pt_status(row):
-                    pt_val = str(row.get("Fitness", "")).strip()
-                    pt_exp = str(row.get("PT Expiry", "")).strip()
-                    if pt_exp and pt_exp.lower() not in ["none", "nan", ""]:
-                        try:
-                            exp_date = pd.to_datetime(pt_exp).date()
-                            if exp_date < datetime.now().date():
-                                return f"❌ Expired ({pt_exp})"
-                            return f"✅ Valid (Expires {pt_exp})"
-                        except Exception:
-                            pass
-                    return pt_val if pt_val and pt_val.lower() != "nan" else "N/A"
-
-                summary_df = pd.DataFrame()
-                summary_df["CAP ID"] = filtered_df[capid_col].astype(str).str.replace(".0", "", regex=False)
-                summary_df["Cadet Name"] = filtered_df.get("Cadet Name", "N/A")
-                summary_df["Flight"] = filtered_df.get("Assigned Flight", filtered_df.get("Flight", "N/A"))
-                summary_df["Working Towards"] = filtered_df.get("Working Towards Achievement No.", "N/A")
-                summary_df["Leadership Completed"] = filtered_df.get("Leadership", "N/A")
-                summary_df["Drill Test Completed"] = filtered_df.get("Drill Test", "N/A")
-                summary_df["AE Completed"] = filtered_df.get("Aerospace (AE) No. Completed", "N/A")
-                summary_df["PT Status"] = filtered_df.apply(format_pt_status, axis=1)
-                summary_df["Promotion Eligible"] = filtered_df.get("Promotion Eligible Date", "N/A")
-                summary_df["Needs for Promotion"] = filtered_df.get("Notes: Needed for Promotion", "N/A")
-
-                st.markdown(f"**Found {len(summary_df)} matching record(s):**")
-                st.dataframe(summary_df, use_container_width=True, hide_index=True)
+        if "Cadet Name" in progress_df.columns:
+            cadet_names_p = sorted([n for n in progress_df["Cadet Name"].dropna().unique() if str(n).strip()])
+            selected_p = st.selectbox("Search / View Individual Cadet:", ["-- View All Cadets --"] + cadet_names_p)
+            if selected_p != "-- View All Cadets --":
+                st.dataframe(progress_df[progress_df["Cadet Name"] == selected_p], use_container_width=True)
             else:
-                st.warning(f"No cadet records found matching **'{search_query}'**.")
+                st.dataframe(progress_df, use_container_width=True)
         else:
-            st.info("💡 **Enter a Cadet Name or CAP ID above to display progress data.**")
+            st.dataframe(progress_df, use_container_width=True)
     else:
-        st.error("Unable to load cadet progress data.")
+        st.info("Cadet progress sheet currently unavailable.")
 
 # ---------------------------------------------------------
 # TAB 4: WEDNESDAY SCHEDULE & UOD
 # ---------------------------------------------------------
 with tab_sched:
-    st.markdown("### 📅 Upcoming Wednesday Schedule & UOD (Through Dec 2026)")
-    
-    display_schedule_df = load_schedule()
-    
-    if not display_schedule_df.empty:
-        st.dataframe(display_schedule_df, use_container_width=True, hide_index=True)
+    st.markdown("### Wednesday Training Schedule & Uniform of the Day")
+    schedule_df = load_schedule()
+    if not schedule_df.empty:
+        st.dataframe(schedule_df, use_container_width=True)
     else:
-        st.info("No upcoming meeting schedule data available.")
+        st.info("Schedule currently unavailable.")
