@@ -418,7 +418,7 @@ with tab_req:
     is_holiday_party = (target_date.month == 12 and target_date.day == 16)
     is_xmas_break = (target_date.month == 12 and target_date.day in [23, 30])
     is_thanksgiving_break = (target_date.month == 11 and target_date.day >= 24)
-    is_5th_wed = (target_date.weekday() == 2 and target_day >= 29 if hasattr(target_date, 'day') else target_date.day >= 29)
+    is_5th_wed = (target_date.weekday() == 2 and target_date.day >= 29)
 
     if is_halloween_date or is_holiday_party or is_xmas_break or is_thanksgiving_break or is_5th_wed:
         if not staff_override_active:
