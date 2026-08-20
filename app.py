@@ -353,7 +353,7 @@ def get_capf60_90_info(grade_str):
         return {
             "phase": "Phase III (The Command Phase)",
             "form_name": "CAPF 60-93 (Cadet Leadership Feedback - Phase III)",
-            "url": "https://www.gocivilairpatrol.com/media/cms/CAPF_6093_A876BCE22180A.pdf"
+            "url": "https://www.gocivilairpatrol.com/media/cms/CAPF_6093_39C650ED8081A.pdf"
         }
     elif g in ["C/MAJ", "C/LTC", "C/COL"]:
         return {
@@ -528,17 +528,9 @@ with tab_req:
                 prereq_valid = False
                 error_msgs.append("No requests are permitted on **Party or Holiday Break dates** (e.g., Halloween Party / Holiday Party / Xmas Break / 5th Wednesday).")
 
-            # 4. 4th Wednesday Validation
-            is_4th_wed = is_4th_wednesday(target_date)
-            if is_4th_wed:
-                if req_type != "4th Wednesday CPFT":
-                    prereq_valid = False
-                    error_msgs.append("4th Wednesdays are reserved exclusively for **CPFT Fitness Testing**. Standard requests are not permitted.")
-                else:
-                    st.info("ℹ️ **Uniform Note:** Standard UOD is **Utility Uniform (ABU/OCP)**. Please arrive in **PTs** for testing, then change into your **Utility Uniform** after testing.")
-            elif req_type == "4th Wednesday CPFT" and not is_4th_wed:
-                prereq_valid = False
-                error_msgs.append("CPFT Testing requests are only valid on **4th Wednesdays**.")
+            # 4. 4th Wednesday Uniform Disclaimer
+            if is_4th_wednesday(target_date):
+                st.info("ℹ️ **4th Wednesday Note:** Arrive in **PTs** for fitness testing, then change into your **Utility Uniform (ABU/OCP)** after testing.")
 
             if req_type == "PRB":
                 if "Achievement 4" in working_ach or any(f"Achievement {i}" in working_ach for i in range(5, 17)):
