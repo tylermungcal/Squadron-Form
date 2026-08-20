@@ -444,26 +444,59 @@ with tab_progress:
         st.error("Unable to load cadet progress data. Please check connection to Google Sheets.")
 
 # ---------------------------------------------------------
-# SCHEDULE LOADER & HELPER
+# SCHEDULE LOADER (Parses Block-Formatted Sheets)
 # ---------------------------------------------------------
 @st.cache_data(ttl=300)
 def load_schedule():
     sheet_id = "17wdWuOFBFyR507_vBITsTkI8il7k-1gDjLLPtNcCzt8"
-    gid = "420770302"
+    gid = "420770302" # AUG 26 tab
     url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
+    
     try:
-        df = pd.read_csv(url)
-        df.columns = [str(c).strip() for c in df.columns]
-        return df
-    except Exception:
-        # Fallback structured data
-        return pd.DataFrame([
-            {"Date": "1st Wednesday", "UOD": "ABU / OCP", "Focus": "Leadership / Drill", "Notes": "Standard Meeting"},
-            {"Date": "2nd Wednesday", "UOD": "Blues (Class B)", "Focus": "AE / PRBs", "Notes": "Standard Meeting"},
-            {"Date": "3rd Wednesday", "UOD": "ABU / OCP", "Focus": "Character / Safety", "Notes": "Standard Meeting"},
-            {"Date": "4th Wednesday", "UOD": "PT Uniform", "Focus": "CPFT / Testing", "Notes": "CPFT Night"},
-            {"Date": "5th Wednesday", "UOD": "Civilian / Activity", "Focus": "Special Event / Social", "Notes": "5th Wednesday Social"}
-        ])
+        # Load raw sheet without default headers
+        raw_df = pd.read_csv(url, header=None)
+        
+        parsed_meetings = []
+        
+        # Scan row by row for date patterns (e.g., "26-August-26", "22-August-2026")
+        for i, row in raw_df.iterrows():
+            row_str = " ".join(row.dropna().astype(str))
+            
+            # Look for date patterns in Column B or anywhere in the row
+            match = re.search(r"(\d{1,2}-(?:\w+|\d{1,2})-\d{2,4})", row_str, re.IGNORECASE)
+            if match:
+                date_str = match.group(1)
+                
+                # Extract surrounding cell values for UOD and Focus
+                uod_val = "ABU / OCP"
+                focus_val = "Standard Training"
+                
+                for col_idx, cell in enumerate(row.dropna()):
+                    cell_text = str(cell).strip()
+                    if "UOD:" in cell_text or "Uniform" in cell_text:
+                        uod_val = cell_text.replace("UOD:", "").strip()
+                    elif col_idx > 2 and cell_text != date_str and "UOD" not in cell_text:
+                        focus_val = cell_text
+                
+                parsed_meetings.append({
+                    "Meeting Date": date_str,
+                    "UOD": uod_val,
+                    "Focus": focus_val
+                })
+        
+        if parsed_meetings:
+            return pd.DataFrame(parsed_meetings)
+            
+    except Exception as e:
+        pass
+        
+    # Fallback clean structure if sheet structure varies per tab
+    return pd.DataFrame([
+        {"Meeting Date": "05-Aug-26", "UOD": "Utility Uniform (ABU/OCP)", "Focus": "Leadership / Drill"},
+        {"Meeting Date": "12-Aug-26", "UOD": "Blues (Class B)", "Focus": "Aerospace / PRBs"},
+        {"Meeting Date": "19-Aug-26", "UOD": "Utility Uniform (ABU/OCP)", "Focus": "Character / Safety"},
+        {"Meeting Date": "26-Aug-26", "UOD": "PT Uniform", "Focus": "CPFT / Testing"}
+    ])
 
 # ---------------------------------------------------------
 # TAB 4: WEDNESDAY SCHEDULE & UOD
@@ -472,38 +505,41 @@ with tab_sched:
     st.markdown("### 📅 Wednesday Meeting Schedule & Uniform of the Day (UOD)")
     st.caption("Reference schedule from [153 Training Schedule Sheet](https://docs.google.com/spreadsheets/d/17wdWuOFBFyR507_vBITsTkI8il7k-1gDjLLPtNcCzt8/edit#gid=420770302)")
     
-    if not schedule_df.empty:
+    schedule_data = load_schedule()
+    
+    if not schedule_data.empty:
         condensed_schedule = []
 
-        for idx, row in schedule_df.iterrows():
-            date_val = str(row.get("Date", row.get("Meeting Date", f"Meeting #{idx+1}"))).strip()
-            uod_val = str(row.get("UOD", row.get("Uniform", "ABU / OCP"))).strip()
-            focus_val = str(row.get("Focus", row.get("Event", row.get("Notes", "")))).strip()
+        for idx, row in schedule_data.iterrows():
+            date_val = str(row.get("Meeting Date", f"Meeting #{idx+1}")).strip()
+            uod_val = str(row.get("UOD", "ABU / OCP")).strip()
+            focus_val = str(row.get("Focus", "")).strip()
 
             date_lower = date_val.lower()
             focus_lower = focus_val.lower()
+            uod_lower = uod_val.lower()
 
             # 1. Detect 4th Wednesday / CPFT
-            is_cpft = "4th" in date_lower or "cpft" in focus_lower or "pt" in uod_val.lower()
+            is_cpft = "cpft" in focus_lower or "pt" in uod_lower or "4th" in date_lower
             cpft_status = "✅ Yes" if is_cpft else "No"
 
             # 2. Check for 5th Wednesdays, Parties, or Breaks
-            is_5th_wed = "5th" in date_lower or "5th wednesday" in focus_lower
+            is_5th_wed = "5th" in date_lower or "5th" in focus_lower
             is_party = any(kw in focus_lower for kw in ["party", "social", "banquet", "potluck"])
-            is_break = any(kw in focus_lower for kw in ["break", "holiday", "no meeting", "canceled", "cancelled", "thanksgiving", "christmas"])
+            is_break = any(kw in focus_lower for kw in ["break", "holiday", "no meeting", "canceled", "cancelled"])
 
             if is_5th_wed:
-                notes = "⚠️ No Requests Accepted — 5th Wednesday Event"
+                notes = "⚠️ No Requests Accepted — 5th Wednesday Social/Event"
             elif is_party:
-                notes = f"⚠️ No Requests Accepted — Party/Social ({focus_val if focus_val else 'Squadron Event'})"
+                notes = f"⚠️ No Requests Accepted — Party/Social ({focus_val})"
             elif is_break:
                 notes = f"🚫 No Meeting / Requests — {focus_val if focus_val else 'Break/Holiday'}"
             else:
-                notes = "Standard Requests Allowed" if not is_cpft else "CPFT Testing Night"
+                notes = "CPFT Testing Night" if is_cpft else "Standard Requests Allowed"
 
             condensed_schedule.append({
                 "Meeting Date": date_val,
-                "UOD": uod_val if uod_val and uod_val.lower() != "nan" else "ABU / OCP",
+                "UOD": uod_val,
                 "4th Wed CPFT Night": cpft_status,
                 "Status & Notes": notes
             })
@@ -511,4 +547,4 @@ with tab_sched:
         display_schedule_df = pd.DataFrame(condensed_schedule)
         st.dataframe(display_schedule_df, use_container_width=True, hide_index=True)
     else:
-        st.info("No schedule data currently loaded.")
+        st.info("No schedule data available.")
