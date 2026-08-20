@@ -626,10 +626,19 @@ with tab_dashboard:
         if not fresh_backend_df.empty:
             df_edit = fresh_backend_df.copy()
             
-            # Clean Timestamps and Dates (removes ISO 'T' & 'Z' formatting)
+            # Explicitly rename Target Date if Google Sheet header hasn't updated yet
+            rename_dict = {col: "Meeting Date" for col in df_edit.columns if "target" in col.lower()}
+            if rename_dict:
+                df_edit.rename(columns=rename_dict, inplace=True)
+
+            # Clean Timestamps and Dates (strips out time / ISO junk)
             for col in df_edit.columns:
                 col_lower = col.lower()
-                if "time" in col_lower or "date" in col_lower or "target" in col_lower:
+                if "meeting date" in col_lower or "date" in col_lower:
+                    df_edit[col] = df_edit[col].astype(str).apply(
+                        lambda x: str(x).split(" ")[0].split("T")[0] if x and str(x) != "nan" else str(x)
+                    )
+                elif "timestamp" in col_lower or "time" in col_lower:
                     df_edit[col] = df_edit[col].astype(str).apply(
                         lambda x: str(x).replace("T", " ").split(".")[0].replace("Z", "") if "T" in str(x) else str(x)
                     )
