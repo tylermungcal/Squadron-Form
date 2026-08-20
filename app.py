@@ -552,42 +552,44 @@ with tab_req:
                     submit_button = st.form_submit_button("Submit Request")
 
                     if submit_button:
-                        if not prereq_valid:
-                            st.error("Please resolve the prerequisite, required upload, and date validation errors listed above before submitting.")
-                        else:
-                            file_link = ""
-                            proof_link = ""
+    if not prereq_valid:
+        st.error("Please resolve all validation errors before submitting.")
+    else:
+        file_link = ""
+        proof_link = ""
+        with st.spinner("Processing request and uploading files..."):
+            if uploaded_file is not None:
+                file_link = upload_file_to_drive(uploaded_file, PRIMARY_FOLDER_ID) or ""
+            if eservices_proof_file is not None:
+                proof_link = upload_file_to_drive(eservices_proof_file, PROOF_FOLDER_ID) or ""
 
-                            with st.spinner("Processing request and uploading files..."):
-                                if uploaded_file is not None:
-                                    file_link = upload_file_to_drive(uploaded_file, PRIMARY_FOLDER_ID) or ""
+            # Explicitly set your Web App URL
+            webhook_url = "https://script.google.com/macros/s/AKfycby_iDEd9a3hmJQyLhKuP9833KirbBK19Mki2K43eNOSs6iVLYDZq2FEw66V06Bb65uP6g/exec"
 
-                                if eservices_proof_file is not None:
-                                    proof_link = upload_file_to_drive(eservices_proof_file, PROOF_FOLDER_ID) or ""
+            payload = {
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "cadet_name": selected_cadet,
+                "email": email_input,
+                "cap_id": cap_id_input,
+                "grade": grade_input,
+                "flight": flight_input,
+                "request_type": req_type,
+                "milestone_exam": selected_exam_name if req_type == "Milestone Exam" else "",
+                "target_date": target_date.strftime("%Y-%m-%d"),
+                "uploaded_file_url": file_link,
+                "proof_file_url": proof_link,
+                "comments": comments
+            }
 
-                                webhook_url = st.secrets.get("WEBHOOK_URL", "https://script.google.com/macros/s/AKfycbz_Placeholder/exec")
-                                payload = {
-                                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                                    "cadet_name": selected_cadet,
-                                    "email": email_input,
-                                    "cap_id": clean_cap_id,
-                                    "grade": grade_input,
-                                    "flight": flight_input,
-                                    "request_type": req_type,
-                                    "milestone_exam": selected_exam_name if req_type == "Milestone Exam" else "",
-                                    "target_date": target_date.strftime("%d-%b-%Y"),
-                                    "uploaded_file_url": file_link,
-                                    "proof_file_url": proof_link,
-                                    "status": "Pending",
-                                    "comments": comments
-                                }
-
-                                try:
-                                    res = requests.post(webhook_url, json=payload)
-                                    st.success(f"Request for **{req_type}** successfully submitted for **{selected_cadet}**!")
-                                    st.balloons()
-                                except Exception as e:
-                                    st.error(f"Error posting submission to backend: {e}")
+            try:
+                res = requests.post(webhook_url, json=payload)
+                if res.status_code == 200 or "success" in res.text.lower():
+                    st.success("✅ Request submitted successfully! Your submission will now appear on the backend sheet and Live Dashboard.")
+                    st.cache_data.clear() # Clears Streamlit cache so the dashboard updates immediately
+                else:
+                    st.error(f"Failed to post to backend sheet. Server returned status: {res.status_code}")
+            except Exception as e:
+                st.error(f"Error sending request payload: {e}")
 
 # ---------------------------------------------------------
 # TAB 2: LIVE REQUEST DASHBOARD
