@@ -92,7 +92,12 @@ def upload_file_to_drive(uploaded_file, folder_id):
             return None
         file_metadata = {'name': uploaded_file.name, 'parents': [folder_id]}
         media = MediaIoBaseUpload(io.BytesIO(uploaded_file.getvalue()), mimetype=uploaded_file.type, resumable=True)
-        file = service.files().create(body=file_metadata, media_body=media, fields='id, webViewLink').execute()
+        file = service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields='id, webViewLink',
+            supportsAllDrives=True
+        ).execute()
         return file.get('webViewLink')
     except Exception as e:
         st.error(f"Error uploading file to Drive: {e}")
