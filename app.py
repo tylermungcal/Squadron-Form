@@ -393,10 +393,6 @@ def is_drill_test_allowed(target_ach_str):
     return True
 
 def calculate_submission_deadline(target_wed_date):
-    """
-    Calculates deadline: Thursday 23:59 of the week BEFORE the target Wednesday.
-    Target Wed - 6 days = Thursday prior week.
-    """
     thursday_prior = target_wed_date - timedelta(days=6)
     return datetime(thursday_prior.year, thursday_prior.month, thursday_prior.day, 23, 59, 59)
 
@@ -438,6 +434,7 @@ with tab_req:
             st.info(f"**Cadet:** {selected_cadet} | **Target Achievement:** {working_ach}")
 
             all_request_types = [
+                "-- Select Request Type --",
                 "Drill Test", 
                 "PRB", 
                 "4th Wednesday CPFT", 
@@ -456,126 +453,136 @@ with tab_req:
 
             req_type = st.selectbox("Request Type:*", available_types)
             
-            selected_exam_name = ""
-            if req_type == "Milestone Exam":
-                detected_exam = detect_milestone_exam(working_ach)
-                exam_options = [
-                    "Wright Brothers Award Exam", 
-                    "Billy Mitchell Award Exam", 
-                    "Amelia Earhart Award Exam", 
-                    "Ira C. Eaker Award Exam", 
-                    "General Carl A. Spaatz Award Exam"
-                ]
-                default_idx = exam_options.index(detected_exam) if detected_exam in exam_options else 0
-                selected_exam_name = st.selectbox("Select Target Milestone Exam:*", exam_options, index=default_idx)
-
-            lead_val = str(cadet_row.get("Leadership", "")).strip()
-            ae_val = str(cadet_row.get("Aerospace (AE) No. Completed", "0")).strip()
-            
-            prereq_valid = True
-            error_msgs = []
-
-            clean_cap_id = re.sub(r"\D", "", cap_id_input)
-            if len(clean_cap_id) != 6:
-                prereq_valid = False
-                error_msgs.append("CAP ID must be exactly **6 digits**.")
-
-            # Prerequisite Check & Override Switch
-            manual_override = st.checkbox("I have completed my prerequisites, but the Cadet Progress report is displaying incorrect info.")
-            
-            eservices_proof_file = None
-            if manual_override:
-                st.warning("⚠️ **eServices Verification Required:** Please upload a screenshot of your **Cadet Promotions Track Report** from eServices showing completed prerequisites.")
-                eservices_proof_file = st.file_uploader("Upload eServices Promotions Track Screenshot:*", type=["png", "jpg", "jpeg", "pdf"], key="eservices_proof")
-                if eservices_proof_file is None:
-                    prereq_valid = False
-                    error_msgs.append("You must upload an eServices screenshot to verify completed prerequisites.")
+            if req_type == "-- Select Request Type --":
+                st.info("💡 Please select a **Request Type** above to continue.")
             else:
-                if req_type == "Drill Test":
-                    if not lead_val or lead_val in ["None", "nan"] or ae_val in ["0", "None", "nan", ""]:
-                        prereq_valid = False
-                        error_msgs.append("To request a **Drill Test**, you must have completed **Learn to Lead** and **AE Dimensions**.")
+                selected_exam_name = ""
+                if req_type == "Milestone Exam":
+                    detected_exam = detect_milestone_exam(working_ach)
+                    exam_options = [
+                        "Wright Brothers Award Exam", 
+                        "Billy Mitchell Award Exam", 
+                        "Amelia Earhart Award Exam", 
+                        "Ira C. Eaker Award Exam", 
+                        "General Carl A. Spaatz Award Exam"
+                    ]
+                    default_idx = exam_options.index(detected_exam) if detected_exam in exam_options else 0
+                    selected_exam_name = st.selectbox("Select Target Milestone Exam:*", exam_options, index=default_idx)
+
+                lead_val = str(cadet_row.get("Leadership", "")).strip()
+                ae_val = str(cadet_row.get("Aerospace (AE) No. Completed", "0")).strip()
                 
-                elif req_type in ["Technical Writing Submission (SDA)", "Essay Submission"]:
-                    if not lead_val or lead_val in ["None", "nan"] or ae_val in ["0", "None", "nan", ""]:
-                        prereq_valid = False
-                        error_msgs.append("To request an **SDA / Essay Submission**, **Learn to Lead** and **AE Dimensions** must be completed.")
+                prereq_valid = True
+                error_msgs = []
 
-            st.markdown("#### Select Target Wednesday Date")
-            target_date = st.date_input("Target Meeting Date:", value=datetime.now().date())
+                clean_cap_id = re.sub(r"\D", "", cap_id_input)
+                if len(clean_cap_id) != 6:
+                    prereq_valid = False
+                    error_msgs.append("CAP ID must be exactly **6 digits**.")
 
-            # 1. Day of Week Check
-            if target_date.weekday() != 2:
-                prereq_valid = False
-                error_msgs.append("Requests can only be submitted for **Wednesday meeting dates**.")
-
-            # 2. Submission Deadline Check (Thursday 23:59 of prior week)
-            deadline_dt = calculate_submission_deadline(target_date)
-            now = datetime.now()
-            st.caption(f"🕒 **Submission Deadline for {target_date.strftime('%d-%b-%Y')}:** {deadline_dt.strftime('%A, %b %d, %Y at 23:59')}")
-            
-            if now > deadline_dt:
-                prereq_valid = False
-                error_msgs.append(f"The deadline for requesting **{target_date.strftime('%d-%b-%Y')}** passed on **{deadline_dt.strftime('%b %d at 23:59')}** (Thursday of the week prior).")
-
-            # 3. Special Event / Holiday Checks
-            is_halloween_date = (target_date.month == 10 and target_date.day == 28)
-            is_holiday_party = (target_date.month == 12 and target_date.day == 16)
-            is_xmas_break = (target_date.month == 12 and target_date.day in [23, 30])
-            is_5th_wed = (target_date.weekday() == 2 and target_date.day >= 29)
-            
-            if is_halloween_date or is_holiday_party or is_xmas_break or is_5th_wed:
-                prereq_valid = False
-                error_msgs.append("No requests are permitted on **Party or Holiday Break dates** (e.g., Halloween Party / Holiday Party / Xmas Break / 5th Wednesday).")
-
-            # 4. 4th Wednesday Uniform Disclaimer
-            if is_4th_wednesday(target_date):
-                st.info("ℹ️ **4th Wednesday Note:** Arrive in **PTs** for fitness testing, then change into your **Utility Uniform (ABU/OCP)** after testing.")
-
-            if req_type == "PRB":
-                if "Achievement 4" in working_ach or any(f"Achievement {i}" in working_ach for i in range(5, 17)):
-                    st.warning("⚠️ **Reminder:** PRB Requests for Achievement 4+ must take place on a **Blues Night**.")
-
-            if not prereq_valid:
-                for msg in error_msgs:
-                    st.error(f"❌ **Validation Alert:** {msg}")
-
-            with st.form("cadet_request_form", clear_on_submit=True):
-                st.markdown("#### Document Uploads")
+                # Prerequisite Check & Override Switch
+                manual_override = st.checkbox("I have completed my prerequisites, but the Cadet Progress report is displaying incorrect info.")
                 
-                if req_type == "PRB":
-                    prb_info = get_capf60_90_info(grade_input)
-                    st.markdown(f"**Required Form:** Submit your **[{prb_info['form_name']}]({prb_info['url']})** for **{prb_info['phase']}** ({grade_input}).")
-                    uploaded_file = st.file_uploader(f"Upload completed {prb_info['form_name'].split(' ')[0]} PDF/Image:", type=["pdf", "docx", "doc", "jpg", "png"])
+                eservices_proof_file = None
+                if manual_override:
+                    st.warning("⚠️ **eServices Verification Required:** Please upload a screenshot of your **Cadet Promotions Track Report** from eServices showing completed prerequisites.")
+                    eservices_proof_file = st.file_uploader("Upload eServices Promotions Track Screenshot:*", type=["png", "jpg", "jpeg", "pdf"], key="eservices_proof")
+                    if eservices_proof_file is None:
+                        prereq_valid = False
+                        error_msgs.append("You must upload an eServices screenshot to verify completed prerequisites.")
                 else:
-                    uploaded_file = st.file_uploader("Upload SDA Report, Essay, or Reference Documents:", type=["pdf", "docx", "doc", "jpg", "png"])
+                    if req_type == "Drill Test":
+                        if not lead_val or lead_val in ["None", "nan"] or ae_val in ["0", "None", "nan", ""]:
+                            prereq_valid = False
+                            error_msgs.append("To request a **Drill Test**, you must have completed **Learn to Lead** and **AE Dimensions**.")
+                    
+                    elif req_type in ["Technical Writing Submission (SDA)", "Essay Submission"]:
+                        if not lead_val or lead_val in ["None", "nan"] or ae_val in ["0", "None", "nan", ""]:
+                            prereq_valid = False
+                            error_msgs.append("To request an **SDA / Essay Submission**, **Learn to Lead** and **AE Dimensions** must be completed.")
 
-                comments = st.text_area("Additional Notes / Details for Staff:")
+                st.markdown("#### Select Target Wednesday Date")
+                target_date = st.date_input("Target Meeting Date:", value=datetime.now().date())
+
+                # 1. Day of Week Check
+                if target_date.weekday() != 2:
+                    prereq_valid = False
+                    error_msgs.append("Requests can only be submitted for **Wednesday meeting dates**.")
+
+                # 2. Submission Deadline Check (Thursday 23:59 of prior week)
+                deadline_dt = calculate_submission_deadline(target_date)
+                now = datetime.now()
+                st.caption(f"🕒 **Submission Deadline for {target_date.strftime('%d-%b-%Y')}:** {deadline_dt.strftime('%A, %b %d, %Y at 23:59')}")
                 
-                submit_button = st.form_submit_button("Submit Request")
-                if submit_button:
-                    if not prereq_valid:
-                        st.error("Please resolve the prerequisite and date validation errors listed above before submitting.")
-                    else:
-                        file_link = ""
-                        proof_link = ""
-                        folder_id = "1aWN5BSWlMHYwBzrmijnlBEhP4ZEU9sJjx3VLIxqHnTE"
-                        
-                        with st.spinner("Uploading document(s) to Google Drive..."):
-                            if uploaded_file is not None:
-                                file_link = upload_file_to_drive(uploaded_file, folder_id)
-                            if eservices_proof_file is not None:
-                                proof_link = upload_file_to_drive(eservices_proof_file, folder_id)
+                if now > deadline_dt:
+                    prereq_valid = False
+                    error_msgs.append(f"The deadline for requesting **{target_date.strftime('%d-%b-%Y')}** passed on **{deadline_dt.strftime('%b %d at 23:59')}** (Thursday of the week prior).")
 
-                        submission_summary = f"Request for **{req_type}**"
-                        if selected_exam_name:
-                            submission_summary += f" ({selected_exam_name})"
+                # 3. Special Event / Holiday Checks
+                is_halloween_date = (target_date.month == 10 and target_date.day == 28)
+                is_holiday_party = (target_date.month == 12 and target_date.day == 16)
+                is_xmas_break = (target_date.month == 12 and target_date.day in [23, 30])
+                is_5th_wed = (target_date.weekday() == 2 and target_date.day >= 29)
+                
+                if is_halloween_date or is_holiday_party or is_xmas_break or is_5th_wed:
+                    prereq_valid = False
+                    error_msgs.append("No requests are permitted on **Party or Holiday Break dates** (e.g., Halloween Party / Holiday Party / Xmas Break / 5th Wednesday).")
+
+                # 4. 4th Wednesday Uniform Disclaimer (Only shows when request type is active)
+                if is_4th_wednesday(target_date):
+                    st.info("ℹ️ **4th Wednesday Note:** Arrive in **PTs** for fitness testing, then change into your **Utility Uniform (ABU/OCP)** after testing.")
+
+                if req_type == "PRB":
+                    if "Achievement 4" in working_ach or any(f"Achievement {i}" in working_ach for i in range(5, 17)):
+                        st.warning("⚠️ **Reminder:** PRB Requests for Achievement 4+ must take place on a **Blues Night**.")
+
+                if not prereq_valid:
+                    for msg in error_msgs:
+                        st.error(f"❌ **Validation Alert:** {msg}")
+
+                with st.form("cadet_request_form", clear_on_submit=True):
+                    # Check if document uploads should be rendered
+                    # Exclude uploads for: Drill Test, 4th Wed CPFT, and Milestone Exams (excluding Eaker/Spaatz essays if applicable)
+                    no_upload_needed = req_type in ["Drill Test", "4th Wednesday CPFT"] or (
+                        req_type == "Milestone Exam" and selected_exam_name not in ["Ira C. Eaker Award Exam", "General Carl A. Spaatz Award Exam"]
+                    )
+
+                    uploaded_file = None
+                    if not no_upload_needed:
+                        st.markdown("#### Document Uploads")
+                        if req_type == "PRB":
+                            prb_info = get_capf60_90_info(grade_input)
+                            st.markdown(f"**Required Form:** Submit your **[{prb_info['form_name']}]({prb_info['url']})** for **{prb_info['phase']}** ({grade_input}).")
+                            uploaded_file = st.file_uploader(f"Upload completed {prb_info['form_name'].split(' ')[0]} PDF/Image:", type=["pdf", "docx", "doc", "jpg", "png"])
+                        else:
+                            uploaded_file = st.file_uploader("Upload SDA Report, Essay, or Reference Documents:", type=["pdf", "docx", "doc", "jpg", "png"])
+
+                    comments = st.text_area("Additional Notes / Details for Staff:")
+                    
+                    submit_button = st.form_submit_button("Submit Request")
+                    if submit_button:
+                        if not prereq_valid:
+                            st.error("Please resolve the prerequisite and date validation errors listed above before submitting.")
+                        else:
+                            file_link = ""
+                            proof_link = ""
+                            folder_id = "1aWN5BSWlMHYwBzrmijnlBEhP4ZEU9sJjx3VLIxqHnTE"
                             
-                        st.success(f"{submission_summary} successfully submitted for {selected_cadet} (CAP ID: {clean_cap_id}, {grade_input}, {flight_input} Flight)!")
-                        if file_link:
-                            st.markdown(f"📄 **Uploaded Document:** [View in Drive]({file_link})")
-                        if proof_link:
-                            st.markdown(f"📸 **eServices Prerequisite Proof:** [View Screenshot in Drive]({proof_link})")
+                            with st.spinner("Uploading document(s) to Google Drive..."):
+                                if uploaded_file is not None:
+                                    file_link = upload_file_to_drive(uploaded_file, folder_id)
+                                if eservices_proof_file is not None:
+                                    proof_link = upload_file_to_drive(eservices_proof_file, folder_id)
+
+                            submission_summary = f"Request for **{req_type}**"
+                            if selected_exam_name:
+                                submission_summary += f" ({selected_exam_name})"
+                                
+                            st.success(f"{submission_summary} successfully submitted for {selected_cadet} (CAP ID: {clean_cap_id}, {grade_input}, {flight_input} Flight)!")
+                            if file_link:
+                                st.markdown(f"📄 **Uploaded Document:** [View in Drive]({file_link})")
+                            if proof_link:
+                                st.markdown(f"📸 **eServices Prerequisite Proof:** [View Screenshot in Drive]({proof_link})")
     else:
         st.warning("Unable to fetch Cadet Progress data.")
 
