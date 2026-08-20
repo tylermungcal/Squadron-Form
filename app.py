@@ -379,31 +379,51 @@ with tab_req:
 
                 st.markdown("#### Select Target Wednesday Date")
                 target_date = st.date_input("Target Meeting Date:", value=datetime.now().date())
+    
+    # ---------------------------------------------------------
+    # STAFF OVERRIDE PIN SETUP
+    # ---------------------------------------------------------
+    STAFF_PIN = "1263"
+    
+    with st.expander("🔑 Staff Override (Authorized Staff Only)"):
+        input_pin = st.text_input("Enter Staff PIN to override date/deadline validations:", type="password")
+        staff_override_active = (input_pin == STAFF_PIN)
+        if staff_override_active:
+            st.success("✅ Staff Override Active: Date & deadline validation blocks will be bypassed.")
 
-                if target_date.weekday() != 2:
-                    prereq_valid = False
-                    error_msgs.append("Requests can only be submitted for **Wednesday meeting dates**.")
+    # Wednesday Date Check
+    if target_date.weekday() != 2:
+        if not staff_override_active:
+            prereq_valid = False
+            error_msgs.append("Requests can only be submitted for **Wednesday meeting dates**.")
 
-                if req_type == "4th Wednesday CPFT" and not is_4th_wednesday(target_date):
-                    prereq_valid = False
-                    error_msgs.append("4th Wednesday CPFT requests can **only** be submitted for dates that are the **4th Wednesday** of the month.")
+    # 4th Wednesday CPFT Check
+    if req_type == "4th Wednesday CPFT" and not is_4th_wednesday(target_date):
+        if not staff_override_active:
+            prereq_valid = False
+            error_msgs.append("4th Wednesday CPFT requests can **only** be submitted for dates that are the **4th Wednesday** of the month.")
 
-                deadline_dt = calculate_submission_deadline(target_date)
-                now = datetime.now()
-                st.caption(f"🕒 **Submission Deadline for {target_date.strftime('%d-%b-%Y')}:** {deadline_dt.strftime('%A, %b %d, %Y at 23:59')}")
+    # Deadline Validation (6 Days Prior at 23:59)
+    deadline_dt = calculate_submission_deadline(target_date)
+    now = datetime.now()
+    st.caption(f"🕒 **Submission Deadline for {target_date.strftime('%d-%b-%Y')}:** {deadline_dt.strftime('%A, %b %d, %Y at 23:59')}")
 
-                if now > deadline_dt:
-                    prereq_valid = False
-                    error_msgs.append(f"The deadline for requesting **{target_date.strftime('%d-%b-%Y')}** passed on **{deadline_dt.strftime('%b %d at 23:59')}** (Thursday of the week prior).")
+    if now > deadline_dt:
+        if not staff_override_active:
+            prereq_valid = False
+            error_msgs.append(f"The deadline for requesting **{target_date.strftime('%d-%b-%Y')}** passed on **{deadline_dt.strftime('%b %d at 23:59')}** (Thursday of the week prior).")
 
-                is_halloween_date = (target_date.month == 10 and target_date.day == 28)
-                is_holiday_party = (target_date.month == 12 and target_date.day == 16)
-                is_xmas_break = (target_date.month == 12 and target_date.day in [23, 30])
-                is_5th_wed = (target_date.weekday() == 2 and target_date.day >= 29)
+    # Holiday / Party / Break Dates Validation
+    is_halloween_date = (target_date.month == 10 and target_date.day == 28)
+    is_holiday_party = (target_date.month == 12 and target_date.day == 16)
+    is_xmas_break = (target_date.month == 12 and target_date.day in [23, 30])
+    is_thanksgiving_break = (target_date.month == 11 and target_date.day >= 24)
+    is_5th_wed = (target_date.weekday() == 2 and target_day >= 29 if hasattr(target_date, 'day') else target_date.day >= 29)
 
-                if is_halloween_date or is_holiday_party or is_xmas_break or is_5th_wed:
-                    prereq_valid = False
-                    error_msgs.append("No requests are permitted on **Party or Holiday Break dates** (e.g., Halloween Party / Holiday Party / Xmas Break / 5th Wednesday).")
+    if is_halloween_date or is_holiday_party or is_xmas_break or is_thanksgiving_break or is_5th_wed:
+        if not staff_override_active:
+            prereq_valid = False
+            error_msgs.append("No requests are permitted on **Party or Holiday Break dates** (e.g., Thanksgiving Break / Halloween Party / Holiday Party / Xmas Break / 5th Wednesday).")
 
                 if req_type == "PRB":
                     if "Achievement 4" in working_ach or any(f"Achievement {i}" in working_ach for i in range(5, 17)):
