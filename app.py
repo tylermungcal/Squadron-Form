@@ -245,17 +245,24 @@ def load_schedule():
             is_break = is_xmas_break or is_thanksgiving_break or any(kw in f_lower for kw in ["break", "holiday", "canceled"])
             is_party = is_halloween or is_holiday_party or any(kw in f_lower for kw in ["social", "banquet"])
 
-            # Force "N/A" for Breaks, Parties, or 5th Wednesdays
+           # Force "N/A" for Breaks, Parties, or 5th Wednesdays
             if is_break or is_party or is_5th:
                 cat = "N/A"
             elif any(kw in f_lower for kw in ["ae", "aerospace", "stem"]):
                 cat = "Aerospace Education (AE)"
             elif any(kw in f_lower for kw in ["character", "moral", "cd"]):
                 cat = "Character Development"
-            elif any(kw in f_lower for kw in ["safety", "es", "emergency", "ground team", "fitness", "cpft"]):
+            elif any(kw in f_lower for kw in ["safety", "es", "emergency", "ground team"]):
                 cat = "Safety"
             else:
-                cat = "Safety"
+                # Default fallback based on week of the month if no keyword matches
+                week_num = (dt.day - 1) // 7 + 1
+                if week_num == 2:
+                    cat = "Aerospace Education (AE)"
+                elif week_num == 3:
+                    cat = "Character Development"
+                else:
+                    cat = "Safety"
 
             uod_final = "Utility Uniform (ABU/OCP)" if is_cpft else row["UOD"]
             cpft_flag = "✅ Yes" if is_cpft else "No"
