@@ -480,26 +480,27 @@ with tab_req:
                     prereq_valid = False
                     error_msgs.append("CAP ID must be exactly **6 digits**.")
 
-                # Prerequisite Check & Override Switch
-                manual_override = st.checkbox("I have completed my prerequisites, but the Cadet Progress report is displaying incorrect info.")
-                
                 eservices_proof_file = None
-                if manual_override:
-                    st.warning("⚠️ **eServices Verification Required:** Please upload a screenshot of your **Cadet Promotions Track Report** from eServices showing completed prerequisites.")
-                    eservices_proof_file = st.file_uploader("Upload eServices Promotions Track Screenshot:*", type=["png", "jpg", "jpeg", "pdf"], key="eservices_proof")
-                    if eservices_proof_file is None:
-                        prereq_valid = False
-                        error_msgs.append("You must upload an eServices screenshot to verify completed prerequisites.")
-                else:
-                    if req_type == "Drill Test":
-                        if not lead_val or lead_val in ["None", "nan"] or ae_val in ["0", "None", "nan", ""]:
+                
+                # Prerequisite checks and override switch (ONLY for non-CPFT requests)
+                if req_type != "4th Wednesday CPFT":
+                    manual_override = st.checkbox("I have completed my prerequisites, but the Cadet Progress report is displaying incorrect info.")
+                    if manual_override:
+                        st.warning("⚠️ **eServices Verification Required:** Please upload a screenshot of your **Cadet Promotions Track Report** from eServices showing completed prerequisites.")
+                        eservices_proof_file = st.file_uploader("Upload eServices Promotions Track Screenshot:*", type=["png", "jpg", "jpeg", "pdf"], key="eservices_proof")
+                        if eservices_proof_file is None:
                             prereq_valid = False
-                            error_msgs.append("To request a **Drill Test**, you must have completed **Learn to Lead** and **AE Dimensions**.")
-                    
-                    elif req_type in ["Technical Writing Submission (SDA)", "Essay Submission"]:
-                        if not lead_val or lead_val in ["None", "nan"] or ae_val in ["0", "None", "nan", ""]:
-                            prereq_valid = False
-                            error_msgs.append("To request an **SDA / Essay Submission**, **Learn to Lead** and **AE Dimensions** must be completed.")
+                            error_msgs.append("You must upload an eServices screenshot to verify completed prerequisites.")
+                    else:
+                        if req_type == "Drill Test":
+                            if not lead_val or lead_val in ["None", "nan"] or ae_val in ["0", "None", "nan", ""]:
+                                prereq_valid = False
+                                error_msgs.append("To request a **Drill Test**, you must have completed **Learn to Lead** and **AE Dimensions**.")
+                        
+                        elif req_type in ["Technical Writing Submission (SDA)", "Essay Submission"]:
+                            if not lead_val or lead_val in ["None", "nan"] or ae_val in ["0", "None", "nan", ""]:
+                                prereq_valid = False
+                                error_msgs.append("To request an **SDA / Essay Submission**, **Learn to Lead** and **AE Dimensions** must be completed.")
 
                 st.markdown("#### Select Target Wednesday Date")
                 target_date = st.date_input("Target Meeting Date:", value=datetime.now().date())
@@ -509,7 +510,12 @@ with tab_req:
                     prereq_valid = False
                     error_msgs.append("Requests can only be submitted for **Wednesday meeting dates**.")
 
-                # 2. Submission Deadline Check (Thursday 23:59 of prior week)
+                # 2. Enforce 4th Wednesday check specifically for CPFT requests
+                if req_type == "4th Wednesday CPFT" and not is_4th_wednesday(target_date):
+                    prereq_valid = False
+                    error_msgs.append("4th Wednesday CPFT requests can **only** be submitted for dates that are the **4th Wednesday** of the month.")
+
+                # 3. Submission Deadline Check (Thursday 23:59 of prior week)
                 deadline_dt = calculate_submission_deadline(target_date)
                 now = datetime.now()
                 st.caption(f"🕒 **Submission Deadline for {target_date.strftime('%d-%b-%Y')}:** {deadline_dt.strftime('%A, %b %d, %Y at 23:59')}")
@@ -518,7 +524,7 @@ with tab_req:
                     prereq_valid = False
                     error_msgs.append(f"The deadline for requesting **{target_date.strftime('%d-%b-%Y')}** passed on **{deadline_dt.strftime('%b %d at 23:59')}** (Thursday of the week prior).")
 
-                # 3. Special Event / Holiday Checks
+                # 4. Special Event / Holiday Checks
                 is_halloween_date = (target_date.month == 10 and target_date.day == 28)
                 is_holiday_party = (target_date.month == 12 and target_date.day == 16)
                 is_xmas_break = (target_date.month == 12 and target_date.day in [23, 30])
@@ -537,7 +543,7 @@ with tab_req:
                     for msg in error_msgs:
                         st.error(f"❌ **Validation Alert:** {msg}")
 
-                # 4. 4th Wednesday Uniform Disclaimer (ONLY renders when '4th Wednesday CPFT' is chosen)
+                # 5. 4th Wednesday Uniform Disclaimer (ONLY renders when '4th Wednesday CPFT' is chosen)
                 if req_type == "4th Wednesday CPFT":
                     st.info("ℹ️ **4th Wednesday Note:** Arrive in PTs for testing at 1800, then change into Utility after testing.")
 
