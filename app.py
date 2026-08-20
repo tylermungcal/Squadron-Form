@@ -110,7 +110,7 @@ def load_cadet_progress():
     except Exception:
         return pd.DataFrame()
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=15)
 def load_submitted_backend():
     sheet_id = "1aWN5BSWlMHYwBzrmijnlBEhP4ZEU9sJjx3VLIxqHnTE"
     gid = "0"
@@ -425,14 +425,17 @@ with tab_req:
             working_ach = str(cadet_row.get("Working Towards Achievement No.", "N/A"))
             
             raw_cap_id = str(cadet_row.get("CAP ID", "")).replace(".0", "").strip()
+            inferred_email = str(cadet_row.get("Email", cadet_row.get("Cadet Email", ""))).strip()
             inferred_grade = infer_current_grade(working_ach)
 
-            col1, col2, col3 = st.columns(3)
+            col1, col2, col3, col4 = st.columns(4)
             with col1:
                 cap_id_input = st.text_input("CAP ID (6 Digits):*", value=raw_cap_id)
             with col2:
-                grade_input = st.text_input("Current Grade (Auto-Inferred):*", value=inferred_grade)
+                email_input = st.text_input("Email Address:*", value=inferred_email)
             with col3:
+                grade_input = st.text_input("Current Grade (Auto-Inferred):*", value=inferred_grade)
+            with col4:
                 flight_input = st.selectbox("Flight:*", ["Alpha", "Bravo", "Charlie", "CTF", "Support", "Line"])
 
             st.info(f"**Cadet:** {selected_cadet} | **Target Achievement:** {working_ach}")
@@ -483,6 +486,10 @@ with tab_req:
                 if len(clean_cap_id) != 6:
                     prereq_valid = False
                     error_msgs.append("CAP ID must be exactly **6 digits**.")
+
+                if "@" not in email_input or "." not in email_input:
+                    prereq_valid = False
+                    error_msgs.append("Please enter a valid **email address**.")
 
                 eservices_proof_file = None
                 
@@ -581,6 +588,7 @@ with tab_req:
                                 payload = {
                                     "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                                     "cadet_name": selected_cadet,
+                                    "email": email_input.strip(),
                                     "cap_id": clean_cap_id,
                                     "grade": grade_input,
                                     "flight": flight_input,
@@ -612,7 +620,7 @@ with tab_req:
         st.warning("Unable to fetch Cadet Progress data.")
 
 # ---------------------------------------------------------
-# TAB 2: LIVE REQUEST DASHBOARD
+# TAB 2: LIVE REQUEST DASHBOARD & EDITING
 # ---------------------------------------------------------
 with tab_dashboard:
     st.markdown("### 📈 Live Submitted Requests Dashboard")
@@ -620,9 +628,56 @@ with tab_dashboard:
     dash_password = st.text_input("🔒 Enter Staff Access Password:", type="password")
     
     if dash_password == "1530":
-        st.success("Access Granted")
+        st.success("Access Granted — Editable Dashboard Enabled")
+        
         if not backend_df.empty:
-            st.dataframe(backend_df, use_container_width=True, hide_index=True)
+            st.markdown("✏️ *You can edit **Status** and **Comments** below. Click **Save Changes** to sync updates to Google Sheets.*")
+            
+            # Interactive data editor
+            edited_df = st.data_editor(
+                backend_df,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Status": st.column_config.SelectboxColumn(
+                        "Status",
+                        help="Update status of request",
+                        options=["Pending", "Approved", "In Review", "Completed", "Denied"],
+                        required=True,
+                    ),
+                    "Uploaded File URL": st.column_config.LinkColumn("Uploaded File"),
+                    "Proof File URL": st.column_config.LinkColumn("Proof Screenshot"),
+                },
+                disabled=[c for c in backend_df.columns if c not in ["Status", "Comments", "data.comments", "data.status"]]
+            )
+            
+            if st.button("💾 Save Changes to Google Sheets"):
+                apps_script_url = st.secrets.get("APPS_SCRIPT_URL", "")
+                if apps_script_url:
+                    updated_count = 0
+                    for idx, row in edited_df.iterrows():
+                        orig_row = backend_df.iloc[idx]
+                        status_col = "Status" if "Status" in edited_df.columns else edited_df.columns[-1]
+                        comments_col = "Comments" if "Comments" in edited_df.columns else edited_df.columns[-2]
+                        
+                        if row[status_col] != orig_row[status_col] or row[comments_col] != orig_row[comments_col]:
+                            payload = {
+                                "action": "update_status",
+                                "timestamp": str(row[edited_df.columns[0]]),
+                                "cap_id": str(row["CAP ID"] if "CAP ID" in edited_df.columns else row[edited_df.columns[3]]),
+                                "status": str(row[status_col]),
+                                "comments": str(row[comments_col])
+                            }
+                            try:
+                                res = requests.post(apps_script_url, json=payload, timeout=10)
+                                if res.status_code == 200:
+                                    updated_count += 1
+                            except Exception:
+                                pass
+                    st.success(f"Successfully updated {updated_count} record(s) in Google Sheets!")
+                    st.cache_data.clear()
+                else:
+                    st.error("Apps Script URL not configured in secrets.")
         else:
             st.info("No request records currently logged.")
     elif dash_password:
