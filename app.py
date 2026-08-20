@@ -89,12 +89,16 @@ def load_cadet_progress():
 
 @st.cache_data(ttl=60)
 def load_submitted_backend():
-    # Updated URL with the exact tab gid
-    url = "https://docs.google.com/spreadsheets/d/1aWN5BSWlMHYwBzrmijnlBEhP4ZEU9sJjx3VLIxqHnTE/export?format=csv&gid=0"
+    # Replace with your deployed Apps Script Web App URL
+    url = "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec"
     try:
-        df = pd.read_csv(url)
-        df.columns = df.columns.str.strip()
-        return df
+        response = requests.get(url)
+        data = response.json()
+        if data and len(data) > 0:
+            df = pd.DataFrame(data[1:], columns=data[0])
+            df.columns = df.columns.str.strip()
+            return df
+        return pd.DataFrame()
     except Exception as e:
         st.error(f"Error loading backend: {e}")
         return pd.DataFrame()
